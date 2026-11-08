@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="ScamCase Enterprise: concept demo for handling bank fraud claims (impersonation fraud, PSR) at the fictional Morild Bank.">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>ScamCase Enterprise for Morild Bank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: app-skall med fast sidemeny (løsningsforslag + demo), arbeidsflate til høyre. Morild = havlys: dyp blågrønn blekk, lysende turkis aksent, rav for frister. */
+:root{
+  --bg:#F2F6F7; --surface:#FFFFFF; --surface-2:#E8EFF1; --ink:#0E2430; --muted:#4D6472; --line:#D2DDE2;
+  --accent:#0B6E78; --accent-ink:#FFFFFF; --accent-soft:#D6EDEF; --glow:#1FA897;
+  --ok:#1C7343; --ok-soft:#DBF0E3; --warn:#8F5400; --warn-soft:#FBEACB; --bad:#AE2A21; --bad-soft:#F7DDDA; --info:#3755A2; --info-soft:#E0E6F6;
+  --side:#0E2430; --side-ink:#D9E7EC; --side-muted:#8FA9B6; --side-hi:#16384A;
+  --f-display:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-body:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r:8px; --r-s:5px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0A161D; --surface:#0F2230; --surface-2:#15303F; --ink:#E2EDF1; --muted:#9AB0BC; --line:#23404F;
+  --accent:#4BC2C6; --accent-ink:#04222A; --accent-soft:#123E46; --glow:#5FDDC9;
+  --ok:#5CC78A; --ok-soft:#133826; --warn:#EFB04A; --warn-soft:#3B2B10; --bad:#F2847B; --bad-soft:#421B18; --info:#90A9F0; --info-soft:#1B2A4C;
+  --side:#071117; --side-ink:#D9E7EC; --side-muted:#7E98A5; --side-hi:#123041;
+  color-scheme:dark; }}
+:root[data-theme="dark"]{
+  --bg:#0A161D; --surface:#0F2230; --surface-2:#15303F; --ink:#E2EDF1; --muted:#9AB0BC; --line:#23404F;
+  --accent:#4BC2C6; --accent-ink:#04222A; --accent-soft:#123E46; --glow:#5FDDC9;
+  --ok:#5CC78A; --ok-soft:#133826; --warn:#EFB04A; --warn-soft:#3B2B10; --bad:#F2847B; --bad-soft:#421B18; --info:#90A9F0; --info-soft:#1B2A4C;
+  --side:#071117; --side-ink:#D9E7EC; --side-muted:#7E98A5; --side-hi:#123041;
+  color-scheme:dark; }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased}
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); z-index:10; background:var(--side)}
+a{color:var(--accent)}
+h1,h2,h3{text-wrap:balance; margin:0}
+h1{font-family:var(--f-display); font-weight:700; font-size:clamp(28px,4vw,40px); line-height:1.12; letter-spacing:-.01em}
+h2{font-family:var(--f-display); font-weight:600; font-size:24px; line-height:1.2}
+h3{font-size:15px; font-weight:600}
+p{margin:0}
+.mono{font-family:var(--f-mono); font-size:.88em}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.eyebrow{font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; font-weight:600; color:var(--muted)}
+:focus-visible{outline:2px solid var(--glow); outline-offset:2px}
+
+/* App-skall */
+.app{display:grid; grid-template-columns:252px minmax(0,1fr); min-height:100%}
+.side{background:var(--side); color:var(--side-ink); position:sticky; top:env(safe-area-inset-top,0px); height:100vh; display:flex; flex-direction:column; padding:22px 14px 18px max(14px, env(safe-area-inset-left,0px)); gap:22px; overflow-y:auto}
+.brand{display:flex; align-items:center; gap:10px; padding:0 8px}
+.brand svg{flex:none; margin-top:-8px}
+.brand b{font-family:var(--f-display); font-size:17px; line-height:1.15; display:block; letter-spacing:.01em; color:#fff}
+.brand small{display:block; font-size:11.5px; color:var(--side-muted); line-height:1.2}
+.navgroup{display:flex; flex-direction:column; gap:2px}
+.navgroup .eyebrow{color:var(--side-muted); padding:0 10px 6px}
+.nav a{display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--side-ink); text-decoration:none; padding:8px 10px; border-radius:var(--r-s); font-size:14px}
+.nav a:hover{background:var(--side-hi)}
+.nav a[aria-current="page"]{background:var(--side-hi); color:#fff; box-shadow:inset 3px 0 0 var(--glow)}
+.nav .cnt{font-family:var(--f-mono); font-size:11px; background:rgba(255,255,255,.1); padding:1px 7px; border-radius:20px}
+.side-foot{margin-top:auto; font-size:12px; color:var(--side-muted); padding:0 10px; display:flex; flex-direction:column; gap:10px}
+.side-foot button{background:transparent; color:var(--side-ink); border:1px solid #2C4A5A; border-radius:var(--r-s); padding:6px 10px; font:inherit; cursor:pointer}
+.side-foot button:hover{background:var(--side-hi)}
+
+.main{min-width:0; display:flex; flex-direction:column}
+.topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(6px); border-bottom:1px solid var(--line); padding-block:10px; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px)); display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; justify-content:space-between}
+.crumb{font-size:13px; color:var(--muted)}
+.crumb b{color:var(--ink); font-weight:600}
+.content{padding-block:28px 64px; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px)); width:100%; max-width:1180px}
+.content.narrow{max-width:980px}
+
+/* Regelverksbryter */
+.regime{display:flex; align-items:center; gap:8px; font-size:13px}
+.regime[hidden]{display:none}
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:var(--r-s); overflow:hidden; background:var(--surface)}
+.seg button{font:inherit; font-size:12.5px; padding:5px 11px; border:0; background:transparent; color:var(--muted); cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); font-weight:600}
+
+/* Felles komponenter */
+.stack{display:flex; flex-direction:column; gap:16px}
+.stack-l{display:flex; flex-direction:column; gap:28px}
+.row{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+.grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
+.grid3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px}
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:18px 20px; min-width:0}
+.panel > h3{margin-bottom:10px}
+.panel-h{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:12px; flex-wrap:wrap}
+.lede{font-size:17px; line-height:1.6; max-width:68ch; color:var(--ink)}
+.prose{max-width:68ch; display:flex; flex-direction:column; gap:10px}
+.btn{font:inherit; font-size:14px; font-weight:600; border-radius:var(--r-s); padding:8px 14px; cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; gap:6px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad); border-color:color-mix(in srgb, var(--bad) 40%, var(--line))}
+.btn.sm{font-size:12.5px; padding:5px 10px}
+.pill{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px; white-space:nowrap; background:var(--surface-2); color:var(--muted)}
+.pill.ok{background:var(--ok-soft); color:var(--ok)} .pill.warn{background:var(--warn-soft); color:var(--warn)}
+.pill.bad{background:var(--bad-soft); color:var(--bad)} .pill.info{background:var(--info-soft); color:var(--info)}
+.pill.acc{background:var(--accent-soft); color:var(--accent)}
+.dot{width:7px; height:7px; border-radius:50%; background:currentColor; display:inline-block}
+.note{display:flex; gap:10px; align-items:flex-start; background:var(--info-soft); color:var(--ink); border-radius:var(--r-s); padding:10px 14px; font-size:13.5px}
+.note b{color:var(--info)}
+.note.warn{background:var(--warn-soft)} .note.warn b{color:var(--warn)}
+.note.ok{background:var(--ok-soft)} .note.ok b{color:var(--ok)}
+.sample{display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; border:1px dashed color-mix(in srgb, var(--accent) 50%, var(--line)); background:var(--accent-soft); border-radius:var(--r-s); padding:9px 14px; font-size:13px}
+.sample b{color:var(--accent)}
+.tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14px}
+th{text-align:left; font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:600; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--surface-2); white-space:nowrap}
+td{padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top}
+tr:last-child td{border-bottom:0}
+#caseRows .mono{white-space:nowrap}
+.tbl-wrap table{min-width:720px}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover td{background:color-mix(in srgb, var(--accent-soft) 45%, transparent)}
+.kpis{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+.kpi{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; display:flex; flex-direction:column; gap:4px; min-width:0}
+.kpi .v{font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.kpi .l{font-size:12.5px; color:var(--muted)}
+.kpi.alert .v{color:var(--bad)}
+label.f{display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:600}
+label.f span.h{font-weight:400; color:var(--muted); font-size:12.5px}
+input[type=text],input[type=number],input[type=date],select,textarea{font:inherit; font-size:14px; padding:8px 10px; border:1px solid var(--line); border-radius:var(--r-s); background:var(--surface); color:var(--ink); width:100%}
+textarea{min-height:120px; resize:vertical; line-height:1.5}
+.choice{display:flex; flex-wrap:wrap; gap:8px}
+.choice label{display:flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:var(--r-s); padding:7px 11px; font-size:13.5px; cursor:pointer; background:var(--surface)}
+.choice label:has(input:checked){border-color:var(--accent); background:var(--accent-soft)}
+.choice input{accent-color:var(--accent); margin:0}
+.chk{display:flex; gap:9px; align-items:flex-start; font-size:14px; padding:7px 0; border-bottom:1px solid var(--line)}
+.chk:last-child{border-bottom:0}
+.chk input{accent-color:var(--accent); margin-top:4px}
+.chk small{display:block; color:var(--muted); font-size:12.5px}
+.ev{display:grid; grid-template-columns:22px minmax(0,1fr) auto; gap:10px; align-items:start; padding:10px 0; border-bottom:1px solid var(--line); font-size:14px}
+.ev:last-child{border-bottom:0}
+.ev .src{font-size:12px; color:var(--muted)}
+.ico{width:20px; height:20px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700}
+.ico.ok{background:var(--ok-soft); color:var(--ok)} .ico.bad{background:var(--bad-soft); color:var(--bad)} .ico.warn{background:var(--warn-soft); color:var(--warn)} .ico.na{background:var(--surface-2); color:var(--muted)}
+
+/* Fristklokke */
+.clock{display:flex; gap:14px; align-items:center}
+.clock .ring{--p:0; width:64px; height:64px; border-radius:50%; background:conic-gradient(var(--c,var(--accent)) calc(var(--p)*1%), var(--surface-2) 0); display:grid; place-items:center; flex:none}
+.clock .ring i{width:48px; height:48px; border-radius:50%; background:var(--surface); display:grid; place-items:center; font-style:normal; font-weight:700; font-size:15px; font-variant-numeric:tabular-nums}
+.deadline{font-variant-numeric:tabular-nums; white-space:nowrap}
+.deadline.bad{color:var(--bad); font-weight:600} .deadline.warn{color:var(--warn); font-weight:600}
+
+/* Triage */
+.triage{border:1px solid var(--line); border-radius:var(--r); overflow:hidden; background:var(--surface)}
+.triage .head{padding:14px 18px; display:flex; flex-direction:column; gap:4px; border-bottom:1px solid var(--line)}
+.triage .head.t-uaut{background:var(--info-soft)} .triage .head.t-psr{background:var(--ok-soft)} .triage .head.t-autbank{background:var(--warn-soft)} .triage .head.t-annen{background:var(--surface-2)} .triage .head.t-ukjent{background:var(--surface-2)}
+.triage .head b{font-size:16px}
+.triage ol{margin:0; padding:12px 18px 14px 38px; display:flex; flex-direction:column; gap:6px; font-size:14px}
+.triage .basis{padding:0 18px 14px; font-size:12.5px; color:var(--muted)}
+.suggest{border-left:3px solid var(--accent); background:var(--accent-soft); padding:12px 16px; border-radius:0 var(--r-s) var(--r-s) 0; display:flex; flex-direction:column; gap:6px}
+.suggest b{font-size:15px}
+
+/* Tidslinje / logg */
+.log{list-style:none; margin:0; padding:0; display:flex; flex-direction:column}
+.log li{display:grid; grid-template-columns:96px minmax(0,1fr); gap:12px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px}
+.log li:last-child{border-bottom:0}
+.log time{color:var(--muted); font-variant-numeric:tabular-nums; font-size:12.5px}
+
+/* Behov-kort og prosess */
+.needs{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
+.need{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; display:grid; grid-template-columns:34px minmax(0,1fr); gap:4px 12px}
+.need .k{font-family:var(--f-mono); font-size:12px; color:var(--accent); font-weight:500; padding-top:2px}
+.need h3{font-size:15px}
+.need p{grid-column:2; font-size:13.5px; color:var(--muted)}
+.need a{grid-column:2; font-size:13px; font-weight:600; text-decoration:none}
+.steps{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; counter-reset:s}
+.step{padding:16px 18px 16px 0; border-top:3px solid var(--line); position:relative; display:flex; flex-direction:column; gap:6px}
+.step.on{border-top-color:var(--accent)}
+.step .eyebrow{color:var(--accent)}
+.step p{font-size:13.5px; color:var(--muted)}
+.hero{display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:28px; align-items:end; padding-bottom:6px}
+.meta{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13px}
+.meta dt{color:var(--muted)} .meta dd{margin:0; font-weight:500}
+
+/* Business case */
+.bc{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px}
+.slider{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; padding:8px 0; border-bottom:1px solid var(--line)}
+.slider:last-child{border-bottom:0}
+.slider label{font-size:13.5px}
+.slider output{font-variant-numeric:tabular-nums; font-weight:600; font-size:13.5px; text-align:right}
+.slider input{grid-column:1 / -1; accent-color:var(--accent); width:100%}
+.slider small{grid-column:1 / -1; color:var(--muted); font-size:12px}
+.bcline{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); font-size:14px}
+.bcline span:last-child{font-variant-numeric:tabular-nums; font-weight:600; text-align:right}
+.bcline.tot{border-bottom:0; border-top:2px solid var(--ink); font-size:16px; padding-top:12px}
+.bcbar{height:12px; border-radius:6px; background:var(--surface-2); overflow:hidden; display:flex}
+.bcbar i{display:block; height:100%}
+
+/* Diagram */
+.arch{overflow-x:auto}
+.arch svg{min-width:720px; width:100%; height:auto; display:block}
+.arch text{font-family:var(--f-body)}
+
+/* Gantt */
+.gantt{display:grid; grid-template-columns:200px minmax(0,1fr); gap:8px 14px; align-items:center; font-size:13.5px}
+.gantt .track{position:relative; height:26px; background:var(--surface-2); border-radius:4px}
+.gantt .bar{position:absolute; top:3px; bottom:3px; border-radius:3px; background:var(--accent); color:var(--accent-ink); font-size:11.5px; font-weight:600; display:flex; align-items:center; padding:0 8px; white-space:nowrap; overflow:hidden}
+.gantt .bar.alt{background:var(--glow); color:#04222A}
+.gantt .bar.ghost{background:transparent; border:1.5px dashed var(--accent); color:var(--accent)}
+.gantt .scale{position:relative; height:16px; font-size:11.5px; color:var(--muted); font-family:var(--f-mono)}
+.gantt .scale span{position:absolute; transform:translateX(-50%)} .gantt .scale span:first-child{transform:none} .gantt .scale span:last-child{transform:translateX(-100%)}
+.gantt .lab small{display:block; font-size:12px; color:var(--muted); font-weight:400}
+
+/* Søyler */
+.bars{display:flex; flex-direction:column; gap:8px}
+.bars .b{display:grid; grid-template-columns:150px minmax(0,1fr) 54px; gap:10px; align-items:center; font-size:13px}
+.bars .b .t{height:14px; background:var(--surface-2); border-radius:3px; overflow:hidden}
+.bars .b .t i{display:block; height:100%; background:var(--accent); border-radius:3px}
+.bars .b span:last-child{text-align:right; font-variant-numeric:tabular-nums; font-weight:600}
+.cols{display:flex; align-items:flex-end; gap:10px; height:170px; padding-top:8px; border-bottom:1px solid var(--line)}
+.cols .c{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px; height:100%; min-width:0}
+.cols .c .stk{width:100%; max-width:44px; display:flex; flex-direction:column-reverse; border-radius:3px 3px 0 0; overflow:hidden}
+.cols .c .stk i{display:block; width:100%}
+.cols .c b{font-size:12px; font-variant-numeric:tabular-nums}
+.colx{display:flex; gap:10px; font-size:11.5px; color:var(--muted)} .colx span{flex:1; text-align:center}
+.legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--muted)}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+
+.toast{position:fixed; right:max(20px, calc(env(safe-area-inset-right,0px) + 20px)); bottom:calc(env(safe-area-inset-bottom,0px) + 20px); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:var(--r-s); font-size:14px; z-index:20; box-shadow:0 6px 24px rgba(0,0,0,.2)}
+.filters{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.split{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:20px; align-items:start}
+.sticky{position:sticky; top:72px}
+.sources li{margin-bottom:6px; font-size:13.5px}
+.hr{height:1px; background:var(--line); border:0; margin:4px 0}
+
+@media (max-width:1080px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .split{grid-template-columns:minmax(0,1fr)} .sticky{position:static} .hero{grid-template-columns:minmax(0,1fr)} .bc{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static; height:auto; flex-direction:row; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:12px max(16px, env(safe-area-inset-right,0px)) 12px max(16px, env(safe-area-inset-left,0px))}
+  .navgroup{flex-direction:row; flex-wrap:wrap; gap:4px; width:100%}
+  .navgroup .eyebrow{display:none}
+  .nav a{padding:6px 10px; font-size:13px}
+  .nav .cnt{display:none}
+  .side-foot{display:none}
+  .topbar{position:static}
+  .grid2,.grid3,.needs{grid-template-columns:minmax(0,1fr)}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .gantt{grid-template-columns:minmax(0,1fr)} .gantt .lab{font-weight:600}
+}
+@media (max-width:480px){ .kpis{grid-template-columns:minmax(0,1fr)} .steps{grid-template-columns:minmax(0,1fr)} .bars .b{grid-template-columns:100px minmax(0,1fr) 44px} }
+@media (prefers-reduced-motion:no-preference){ .view{animation:fade .25s ease-out} @keyframes fade{from{opacity:.4; transform:translateY(4px)} to{opacity:1; transform:none}} }
+.tools{display:flex; align-items:center; gap:12px; margin-left:auto; flex-wrap:wrap}
+.lang-switch{display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; flex-shrink:0}
+.lang-switch button{border:0; background:var(--surface); color:var(--muted); font:inherit; font-size:12px; font-weight:700; letter-spacing:.04em; padding:4px 10px; min-height:30px; min-width:40px; cursor:pointer}
+.lang-switch button+button{border-left:1px solid var(--line)}
+.lang-switch button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+.lang-switch button:hover:not([aria-pressed="true"]){background:var(--accent-soft); color:var(--ink)}
+.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" data-i18n-aria="mainMenu">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 2 L26 6.5 V14 C26 21 21 26 15 28 C9 26 4 21 4 14 V6.5 Z" fill="none" stroke="var(--glow)" stroke-width="2"/><path d="M9.5 15.5 L13.5 19.5 L21 11" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><b>ScamCase Enterprise</b><small data-i18n="brandSub"></small></div>
+    </div>
+    <nav class="navgroup nav" data-i18n-aria="grpProposal">
+      <div class="eyebrow" data-i18n="grpProposal"></div>
+      <a href="#forslag" data-v="forslag" data-i18n="forslag"></a>
+      <a href="#behov" data-v="behov" data-i18n="behov"></a>
+      <a href="#veien-videre" data-v="veien-videre" data-i18n="veien-videre"></a>
+      <a href="#om" data-v="om" data-i18n="om"></a>
+    </nav>
+    <nav class="navgroup nav" data-i18n-aria="grpDemo">
+      <div class="eyebrow" data-i18n="grpDemo"></div>
+      <a href="#saker" data-v="saker"><span data-i18n="saker"></span> <span class="cnt" id="cntOpen">0</span></a>
+      <a href="#nytt-krav" data-v="nytt-krav" data-i18n="nytt-krav"></a>
+      <a href="#innsikt" data-v="innsikt" data-i18n="innsikt"></a>
+    </nav>
+    <div class="side-foot">
+      <span data-i18n="sideFoot"></span>
+      <button type="button" id="resetBtn" data-i18n="reset"></button>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb" id="crumb"></div>
+      <div class="tools">
+        <div class="regime">
+          <span class="muted" data-i18n="regime"></span>
+          <div class="seg" role="group" data-i18n-aria="regime">
+            <button type="button" id="modeNow" aria-pressed="true" data-i18n="modeNow"></button>
+            <button type="button" id="modePsr" aria-pressed="false" data-i18n="modePsr"></button>
+          </div>
+        </div>
+        <div class="lang-switch" role="group" id="langSwitch">
+          <button type="button" data-lang="no" lang="nb" title="Norsk"><span aria-hidden="true">NO</span><span class="sr-only">Norsk</span></button>
+          <button type="button" data-lang="en" lang="en" title="English"><span aria-hidden="true">EN</span><span class="sr-only">English</span></button>
+        </div>
+      </div>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script>
+// ---------- Hjelpere ----------
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, f){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : f; }catch(e){ return f; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+// ---------- Språk ----------
+let LANG = (() => { try{ const v = sessionStorage.getItem('cg_lang'); if(v==='no'||v==='en') return v; }catch(e){} return 'en'; })();
+const L = (no, en) => LANG === 'en' ? en : no;
+const tx = v => v == null ? '' : typeof v === 'string' ? v : (LANG === 'en' ? (v.en ?? v.no) : v.no);
+const LOC = () => LANG === 'en' ? 'en-GB' : 'nb-NO';
+const nok = n => LANG === 'en' ? 'NOK ' + new Intl.NumberFormat('en-GB', {maximumFractionDigits:0}).format(Math.round(n)) : new Intl.NumberFormat('nb-NO', {maximumFractionDigits:0}).format(Math.round(n)) + ' kr';
+const mill = n => LANG === 'en' ? 'NOK ' + (n/1e6).toLocaleString('en-GB', {minimumFractionDigits:1, maximumFractionDigits:1}) + 'm' : (n/1e6).toLocaleString('nb-NO', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' mill. kr';
+const fmtD = d => d ? d.toLocaleDateString(LOC(), {day:'numeric', month:'short', year:'numeric'}) : '–';
+const fmtDs = d => d ? d.toLocaleDateString(LOC(), {day:'numeric', month:'short'}) : '–';
+const dec = (v, max=1) => Number(v).toLocaleString(LOC(), {maximumFractionDigits:max});
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const parseIso = s => { if(!s) return null; const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const plural = (n, no1, noN, en1, enN) => L(n===1?no1:noN, n===1?en1:enN);
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2600); }
+
+const SHELL = {
+  mainMenu:['Hovedmeny','Main menu'], brandSub:['Svindelkrav · Morild Bank','Fraud claims · Morild Bank'],
+  grpProposal:['Løsningsforslag','Solution proposal'], grpDemo:['Konseptdemo','Concept demo'],
+  forslag:['Introduksjon','Introduction'], behov:['Fra behov til løsning','From needs to solution'], 'veien-videre':['Veien videre','Next steps'], om:['Om løsningsforslaget','About the proposal'],
+  saker:['Saksoversikt','Case overview'], 'nytt-krav':['Registrer krav','Register claim'], innsikt:['Innsikt og rapportering','Insights and reporting'],
+  sideFoot:['Konseptdemo. Morild Bank er en fiktiv bank, og alle saker er eksempeldata.','Concept demo. Morild Bank is a fictional bank, and all cases are sample data.'],
+  reset:['Tilbakestill demodata','Reset demo data'], regime:['Regelverk','Rules'], modeNow:['Gjeldende rett','Current law'], modePsr:['PSR (simulert)','PSR (simulated)'], lang:['Språk','Language']
+};
+const S = k => L(SHELL[k][0], SHELL[k][1]);
+function applyShell(){
+  document.documentElement.lang = LANG === 'en' ? 'en' : 'nb';
+  $$('[data-i18n]').forEach(el => el.textContent = S(el.dataset.i18n));
+  $$('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', S(el.dataset.i18nAria)));
+  $('#langSwitch').setAttribute('aria-label', S('lang'));
+  $$('#langSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === LANG));
+}
+
+// ---------- Virkedager (norske helligdager) ----------
+function easter(y){ const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1; return new Date(y,mo-1,da); }
+const _hol = {};
+function holidays(y){
+  if(_hol[y]) return _hol[y];
+  const e = easter(y), add = n => { const d = new Date(e); d.setDate(d.getDate()+n); return iso(d); };
+  return _hol[y] = new Set([`${y}-01-01`, add(-3), add(-2), add(1), `${y}-05-01`, `${y}-05-17`, add(39), add(50), `${y}-12-25`, `${y}-12-26`]);
+}
+const isBiz = d => d.getDay()!==0 && d.getDay()!==6 && !holidays(d.getFullYear()).has(iso(d));
+function addBiz(d, n){ const r = new Date(d); const s = n>=0?1:-1; let k = Math.abs(n); while(k>0){ r.setDate(r.getDate()+s); if(isBiz(r)) k--; } return r; }
+function bizBetween(a, b){
+  if(+b === +a) return 0; const s = b>a?1:-1; let n=0; const r = new Date(a);
+  while((s>0 && r<b) || (s<0 && r>b)){ r.setDate(r.getDate()+s); if(isBiz(r)) n+=s; } return n; }
+const TODAY = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); })();
+const daysAgo = n => { const d = new Date(TODAY); d.setDate(d.getDate()-n); return d; };
+
+// ---------- Kodeverk ----------
+const AVSENDER = { bank:['Morild Bank','Morild Bank'], politi:['Politi / Kripos','Police / Kripos'], annen:['Annen aktør (Posten, Nav, e.l.)','Other party (Posten, Nav, etc.)'], invest:['Investeringstilbud','Investment offer'], ingen:['Ingen kjent','None known'] };
+const KANAL = { telefon:['Telefonsamtale','Phone call'], sms:['SMS','Text message'], epost:['E-post','Email'], chat:['Melding / sosiale medier','Message / social media'], nett:['Nettside / annonse','Website / ad'] };
+const STATUS = {
+  ny:{t:['Ny','New'], c:'info'}, vurdering:{t:['Under vurdering','Under review'], c:'acc'}, 'venter-kunde':{t:['Venter på kunde','Awaiting customer'], c:'warn'},
+  'venter-politi':{t:['Venter på politianmeldelse','Awaiting police report'], c:'warn'}, refundert:{t:['Refundert','Refunded'], c:'ok'}, delvis:{t:['Delvis refundert','Partly refunded'], c:'ok'},
+  avslatt:{t:['Avslått','Rejected'], c:'bad'}, finkn:{t:['Klaget til Finansklagenemnda','Appealed to complaints board'], c:'bad'}
+};
+const av = k => L(...AVSENDER[k]), ka = k => L(...KANAL[k]), st = k => L(...STATUS[k].t);
+const OPEN = new Set(['ny','vurdering','venter-kunde','venter-politi']);
+const Lg = (no, en) => ({no, en}); // tospråklig logglinje
+
+// ---------- Eksempeldata ----------
+function rng(seed){ let s = seed>>>0; return () => { s = (s*1664525 + 1013904223)>>>0; return s/4294967296; }; }
+const FN = ['Ingrid','Ola','Kari','Per','Aud','Jonas','Sigrid','Arne','Liv','Bjørn','Randi','Erik','Turid','Magnus','Solveig','Henrik','Berit','Knut','Marit','Tor','Astrid','Lars','Gunn','Even','Hilde','Rolf','Nora','Svein','Eli','Odd'];
+const LN = ['Solheim','Berg','Hansen','Nilsen','Lie','Dahl','Haugen','Bakke','Strand','Moen','Eide','Lund','Vik','Aas','Holm','Sæther','Myhre','Brekke','Hagen','Rønning'];
+const MOTTAK = ['Revolut Bank UAB','Nordlys Sparebank','Bank Norwegian','Wise Europe','Fjordkyst Bank','N26 Bank','Skagerak Sparebank','Lunar Bank'];
+
+function makeCase(o){
+  return Object.assign({
+    id:'', kunde:'', alder:0, belop:0, betalt:null, meldt:null, politi:null, kanal:'telefon', avsender:'bank', bankKanal:true,
+    utfortAv:'kunde', antallBet:1, mottaker:'', ind:{koder:false, advarsel:false, gjentatt:false, forsett:false, overvaking:false, vop:false, nyEnhet:false, spoof:false},
+    status:'ny', beslutning:null, refundert:0, tilbakefort:0, tilbakekall:'ikke', avgjort:null, forklaring:'', logg:[], showcase:false
+  }, o);
+}
+const L_REG = { kundesenter:Lg('Krav registrert av kundesenter','Claim registered by customer centre'), registrert:Lg('Krav registrert','Claim registered'), recall:Lg('Tilbakekall sendt til mottakerbank via Kystlys Case Desk','Recall sent to receiving bank via Kystlys Case Desk') };
+
+function seedCases(){
+  const r = rng(20261108);
+  const pick = a => a[Math.floor(r()*a.length)];
+  const cases = [];
+  for(let i=0;i<118;i++){
+    const ago = 12 + Math.floor(r()*140);
+    const meldt = daysAgo(ago); while(!isBiz(meldt)) meldt.setDate(meldt.getDate()-1);
+    const x = r();
+    const avsender = x<.46?'bank':x<.62?'politi':x<.80?'invest':x<.92?'annen':'ingen';
+    const utfortAv = (avsender==='bank' && r()<.42) ? 'svindler' : (r()<.12?'svindler':'kunde');
+    const kanal = avsender==='bank' ? (r()<.78?'telefon':'sms') : avsender==='invest' ? (r()<.6?'nett':'chat') : pick(['telefon','sms','epost','chat']);
+    const belop = Math.round((avsender==='invest' ? 40000+r()*260000 : 6000+r()*120000)/100)*100;
+    const koder = utfortAv==='svindler' ? r()<.85 : r()<.15;
+    const ind = { koder, advarsel:r()<.3, gjentatt:r()<.32, forsett:r()<.02, overvaking:r()<.4, vop:r()<.35, nyEnhet:utfortAv==='svindler' ? r()<.9 : r()<.1, spoof: avsender==='bank' && kanal==='telefon' && r()<.7 };
+    let status, refundert=0, beslutning;
+    if(utfortAv==='svindler'){ const g = ind.koder && (ind.advarsel||ind.gjentatt); status = ind.forsett?'avslatt':(g?'delvis':'refundert'); refundert = status==='avslatt'?0:belop-(g?12000:450); beslutning = status; }
+    else { const y = r(); status = y<.18?'refundert':y<.30?'delvis':y<.92?'avslatt':'finkn'; refundert = status==='refundert'?belop:status==='delvis'?Math.round(belop*.5/100)*100:0; beslutning = status==='finkn'?'avslatt':status; }
+    const tk = r(); const tilbakefort = tk<.27 ? Math.round(belop*(.3+r()*.7)/100)*100 : 0;
+    const avgjort = addBiz(meldt, 2+Math.floor(r()*9));
+    cases.push(makeCase({ kunde:`${pick(FN)} ${pick(LN)}`, alder:22+Math.floor(r()*62), belop, betalt:addBiz(meldt,-1), meldt,
+      politi: r()<.8 ? addBiz(meldt, Math.floor(r()*3)) : null, kanal, avsender, bankKanal: avsender==='bank' ? r()<.85 : false, utfortAv, antallBet: ind.gjentatt?2+Math.floor(r()*3):1,
+      mottaker:pick(MOTTAK), ind, status, beslutning, refundert:Math.max(0,refundert), tilbakefort, tilbakekall: tilbakefort?'delvis':'avvist', avgjort,
+      logg:[{d:meldt, t:L_REG.kundesenter},{d:avgjort, t:{dec:status}}] }));
+  }
+  cases.sort((a,b) => a.meldt - b.meldt);
+  cases.forEach((c,i) => c.id = `MB-${c.meldt.getFullYear()}-${String(200+i).padStart(4,'0')}`);
+  let n = 200 + cases.length;
+  const id = () => `MB-${TODAY.getFullYear()}-${String(n++).padStart(4,'0')}`;
+  const today0 = isBiz(TODAY) ? TODAY : addBiz(TODAY, -1);
+
+  const open = [
+    makeCase({ showcase:true, kunde:'Ingrid Solheim', alder:71, belop:84500, betalt:addBiz(today0,-3), meldt:addBiz(today0,-3), politi:addBiz(today0,-2), kanal:'telefon', avsender:'bank', bankKanal:true, utfortAv:'kunde', antallBet:2, mottaker:'Revolut Bank UAB',
+      ind:{koder:false, advarsel:false, gjentatt:false, forsett:false, overvaking:true, vop:true, nyEnhet:false, spoof:true}, status:'vurdering', tilbakekall:'sendt',
+      forklaring:Lg('Kunden ble oppringt fra et nummer som viste «Morild Bank 915 10 000». Innringer sa at kontoen var angrepet og ba henne flytte pengene til en «sikker konto». Hun godkjente to overføringer selv i nettbanken.',
+                    'The customer was called from a number displayed as "Morild Bank 915 10 000". The caller said her account had been attacked and asked her to move the money to a "safe account". She approved two transfers herself in online banking.'),
+      logg:[{d:addBiz(today0,-3), t:Lg('Krav registrert av kundesenter (telefon)','Claim registered by customer centre (phone)')},{d:addBiz(today0,-3), t:L_REG.recall},{d:addBiz(today0,-2), t:Lg('Politianmeldelse mottatt (anmeldelsesnr. 26-184 552)','Police report received (report no. 26-184 552)')},{d:addBiz(today0,-2), t:Lg('Teleoperatør bekreftet falskt avsendernummer','Telecom operator confirmed spoofed caller number')}] }),
+    makeCase({ showcase:true, kunde:'Jonas Berg', alder:34, belop:23900, betalt:addBiz(today0,-1), meldt:today0, politi:today0, kanal:'sms', avsender:'bank', bankKanal:true, utfortAv:'svindler', antallBet:1, mottaker:'Wise Europe',
+      ind:{koder:true, advarsel:true, gjentatt:false, forsett:false, overvaking:false, vop:false, nyEnhet:true, spoof:false}, status:'ny', tilbakekall:'sendt',
+      forklaring:Lg('Kunden fikk SMS i samme tråd som Morild Banks ekte meldinger, med lenke til en falsk innloggingsside. Han oppga BankID-kode og passord. Betalingen ble utført fra en ny enhet han ikke kjenner.',
+                    'The customer received a text in the same thread as Morild Bank’s genuine messages, with a link to a fake login page. He entered his BankID code and password. The payment was made from a new device he does not recognise.'),
+      logg:[{d:today0, t:Lg('Krav registrert via nettbank-skjema','Claim registered via online banking form')},{d:today0, t:L_REG.recall}] }),
+    makeCase({ showcase:true, kunde:'Aud Hansen', alder:79, belop:150000, betalt:addBiz(today0,-4), meldt:addBiz(today0,-4), politi:addBiz(today0,-4), kanal:'telefon', avsender:'politi', bankKanal:false, utfortAv:'kunde', antallBet:3, mottaker:'Fjordkyst Bank',
+      ind:{koder:false, advarsel:false, gjentatt:true, forsett:false, overvaking:true, vop:true, nyEnhet:false, spoof:false}, status:'vurdering', tilbakekall:'delvis', tilbakefort:41000,
+      forklaring:Lg('Innringer presenterte seg som etterforsker i Kripos og sa at bankansatte var involvert i svindel. Kunden ble bedt om ikke å kontakte banken og overførte penger til en «beskyttet konto» i tre omganger.',
+                    'The caller introduced himself as a Kripos investigator and said bank employees were involved in fraud. The customer was told not to contact the bank and transferred money to a "protected account" in three rounds.'),
+      logg:[{d:addBiz(today0,-4), t:Lg('Krav registrert i filial','Claim registered at branch')},{d:addBiz(today0,-4), t:Lg('Politianmeldelse mottatt','Police report received')},{d:addBiz(today0,-3), t:Lg('Mottakerbank tilbakeførte 41 000 kr','Receiving bank returned NOK 41,000')}] }),
+    makeCase({ showcase:true, kunde:'Erik Lund', alder:52, belop:210000, betalt:addBiz(today0,-6), meldt:addBiz(today0,-5), politi:null, kanal:'nett', avsender:'invest', bankKanal:false, utfortAv:'kunde', antallBet:4, mottaker:'Lunar Bank',
+      ind:{koder:false, advarsel:true, gjentatt:true, forsett:false, overvaking:false, vop:false, nyEnhet:false, spoof:false}, status:'venter-kunde', tilbakekall:'avvist',
+      forklaring:Lg('Kunden investerte i en kryptoplattform etter en annonse på sosiale medier. Han betalte fire ganger over tre uker og ble advart av nettbanken før den siste betalingen.',
+                    'The customer invested in a crypto platform after an ad on social media. He paid four times over three weeks and was warned by online banking before the last payment.'),
+      logg:[{d:addBiz(today0,-5), t:L_REG.kundesenter},{d:addBiz(today0,-4), t:Lg('Mottakerbank avviste tilbakekall (midlene var tatt ut)','Receiving bank rejected recall (funds already withdrawn)')},{d:addBiz(today0,-3), t:Lg('Ba kunden om kontoutskrift fra plattformen','Asked the customer for a statement from the platform')}] })
+  ];
+  const r2 = rng(77);
+  const pk = a => a[Math.floor(r2()*a.length)];
+  const more = [
+    ['bank','telefon','kunde',true, 12, 'vurdering'], ['bank','sms','svindler',true, 1, 'ny'], ['politi','telefon','kunde',false, 6, 'vurdering'],
+    ['bank','telefon','kunde',true, 2, 'venter-politi'], ['annen','sms','svindler',false, 0, 'ny'], ['bank','chat','kunde',false, 7, 'vurdering'],
+    ['bank','telefon','svindler',true, 1, 'vurdering'], ['invest','chat','kunde',false, 9, 'vurdering'], ['bank','telefon','kunde',true, 14, 'vurdering']
+  ];
+  more.forEach(([a,k,ut,bk,ago,s]) => {
+    const meldt = addBiz(today0, -ago);
+    open.push(makeCase({ kunde:`${pk(FN)} ${pk(LN)}`, alder:25+Math.floor(r2()*60), belop:Math.round((8000+r2()*110000)/100)*100, betalt:addBiz(meldt,-1), meldt,
+      politi: s==='venter-politi' ? null : (r2()<.85 ? meldt : null), kanal:k, avsender:a, bankKanal:bk, utfortAv:ut, mottaker:pk(MOTTAK),
+      ind:{koder: ut==='svindler', advarsel:r2()<.3, gjentatt:r2()<.3, forsett:false, overvaking:r2()<.45, vop:r2()<.4, nyEnhet: ut==='svindler', spoof: a==='bank' && k==='telefon' && bk},
+      status:s, tilbakekall: r2()<.5 ? 'sendt' : 'avvist', logg:[{d:meldt, t:L_REG.registrert}] }));
+  });
+  open.sort((a,b) => a.meldt - b.meldt).forEach(c => c.id = id());
+  return cases.concat(open);
+}
+
+// ---------- Tilstand ----------
+let MODE = store.get('cg_mode', 'now');
+let CASES = [];
+function reviveCase(c){ ['betalt','meldt','politi','avgjort'].forEach(k => c[k] = c[k] ? parseIso(c[k]) : null); c.logg = (c.logg||[]).map(l => ({d:parseIso(l.d), t:l.t})); return makeCase(c); }
+function serialize(c){ const o = {...c}; ['betalt','meldt','politi','avgjort'].forEach(k => o[k] = c[k] ? iso(c[k]) : null); o.logg = c.logg.map(l => ({d:iso(l.d), t:l.t})); return o; }
+function loadCases(){
+  CASES = seedCases();
+  const changes = store.get('cg_changes', {});
+  const added = store.get('cg_added', []);
+  CASES = CASES.map(c => changes[c.id] ? reviveCase({...serialize(c), ...changes[c.id]}) : c);
+  added.forEach(a => CASES.push(reviveCase(a)));
+}
+function saveCase(c){
+  if(c.added){ const added = store.get('cg_added', []).filter(a => a.id !== c.id); added.push(serialize(c)); store.set('cg_added', added); }
+  else { const ch = store.get('cg_changes', {}); ch[c.id] = serialize(c); store.set('cg_changes', ch); }
+}
+const byId = id => CASES.find(c => c.id === id);
+// Logglinjer: streng, {no,en} eller beslutning {dec, amt, reg, accepted}
+function logText(t){
+  if(t && t.dec){ const base = L('Beslutning: ','Decision: ') + st(t.dec) + (t.amt ? ` (${nok(t.amt)})` : '');
+    if(t.reg) return base + L(`. Regelverk: ${t.reg.no}`, `. Rules: ${t.reg.en}`) + (t.accepted ? L('. Forslaget ble godtatt.','. The suggestion was accepted.') : L('. Saksbehandler valgte selv.','. Chosen by case handler.'));
+    return base; }
+  return tx(t);
+}
+
+// ---------- Regelverkstriage ----------
+const SHORT = { uaut:['Uautorisert','Unauthorised'], psr:['PSR bank-imitasjon','PSR bank impersonation'], autbank:['Bank-imitasjon (i dag)','Bank impersonation (today)'], annen:['Annen svindel','Other fraud'], ukjent:['Uavklart','Unresolved'] };
+function triage(c, mode=MODE){
+  const t = { regime:'ukjent', cls:'t-ukjent', title:L('Mangler opplysninger','Information missing'), short:L(...SHORT.ukjent), shortObj:Lg(...SHORT.ukjent), steps:[], basis:'', frist:null, fristLabel:'', fristNote:'' };
+  const set = (reg, o) => Object.assign(t, { regime:reg, short:L(...SHORT[reg]), shortObj:Lg(...SHORT[reg]) }, o);
+  if(c.utfortAv === 'svindler'){
+    return set('uaut', { cls:'t-uaut', title:L('Uautorisert betaling','Unauthorised payment'),
+      steps: LANG==='en' ? [
+        'The customer did not approve the payment. The fraudster used the customer’s login details.',
+        'Main rule: the bank must refund the amount. The customer’s excess is normally NOK 450.',
+        'If the customer was grossly negligent (for example shared a BankID code after manipulation), the excess can be up to NOK 12,000.',
+        'Only in case of intent, or justified suspicion of fraud by the customer, may the bank withhold the full amount.' ] : [
+        'Kunden har ikke selv godkjent betalingen. Svindleren brukte kundens innloggingsdata.',
+        'Hovedregel: banken skal tilbakeføre beløpet. Kundens egenandel er normalt 450 kr.',
+        'Har kunden vært grovt uaktsom (for eksempel delt BankID-kode etter manipulasjon), kan egenandelen bli inntil 12 000 kr.',
+        'Bare ved forsett eller ved begrunnet mistanke om svindel fra kunden kan banken holde tilbake hele beløpet.' ],
+      basis:L('Finansavtaleloven §§ 4-30 og 4-32. HR-2022-1752-A: grov uaktsomhet ved utlevering av BankID-kode ga 12 000 kr i egenandel.','Norwegian Financial Contracts Act §§ 4-30 and 4-32. Supreme Court HR-2022-1752-A: gross negligence in handing over a BankID code gave an excess of NOK 12,000.'),
+      frist: addBiz(c.meldt, 1), fristLabel:L('Tilbakeføring senest neste virkedag','Refund by the next business day'), fristNote:L('Regnes fra kravet ble meldt.','Counted from when the claim was reported.') });
+  }
+  if(c.utfortAv !== 'kunde') { t.steps = [L('Avklar om kunden selv godkjente betalingen, eller om svindleren brukte kundens innloggingsdata.','Clarify whether the customer approved the payment, or whether the fraudster used the customer’s login details.')]; return t; }
+  const bankImp = c.avsender === 'bank' && c.bankKanal;
+  if(bankImp && mode === 'psr'){
+    const start = c.politi ? (c.politi > c.meldt ? c.politi : c.meldt) : null;
+    return set('psr', { cls:'t-psr', title:L('Bank-imitasjon: refusjonsrett etter PSR','Bank impersonation: right to refund under PSR'),
+      steps: LANG==='en' ? [
+        'The customer approved the payment, but the fraudster posed as Morild Bank via a channel attributed to the bank.',
+        c.politi ? 'The customer has notified the bank and filed a police report.' : 'Police report missing. The deadline starts only when both the notification and the report have been received.',
+        'The bank must refund the full amount within 15 business days, or give a justified refusal.',
+        'A refusal requires objectively justified suspicion of fraud or gross negligence by the customer. The burden of proof is on the bank, and strong customer authentication is not proof in itself.' ] : [
+        'Kunden godkjente betalingen selv, men svindleren utga seg for å være Morild Bank via en kanal som tilskrives banken.',
+        c.politi ? 'Kunden har meldt fra til banken og levert politianmeldelse.' : 'Politianmeldelse mangler. Fristen starter først når både varsel og anmeldelse er mottatt.',
+        'Banken skal refundere hele beløpet innen 15 virkedager, eller gi en begrunnet avvisning.',
+        'Avslag krever objektivt begrunnet mistanke om svindel eller grov uaktsomhet hos kunden. Bevisbyrden ligger hos banken, og godkjent sterk autentisering er ikke bevis i seg selv.' ],
+      basis:L('PSR, regler om refusjon ved imitasjon av betalingstjenesteyter. Basert på politisk enighet 27.11.2025 og Rådets posisjon 28.10.2026. Endelig tekst er ikke publisert.','PSR, rules on refunds for impersonation of a payment service provider. Based on the political agreement of 27 Nov 2025 and the Council position of 28 Oct 2026. The final text has not been published.'),
+      frist: start ? addBiz(start, 15) : null, fristLabel:L('Refusjon eller begrunnet avslag','Refund or justified refusal'), fristNote: start ? L('Regnes fra varsel og politianmeldelse er mottatt.','Counted from receipt of notification and police report.') : L('Starter når politianmeldelse er mottatt.','Starts when the police report is received.') });
+  }
+  const internal = { frist: addBiz(c.meldt, 20), fristLabel:L('Intern målfrist for svar','Internal target for response'), fristNote:L('Morild Banks egen retningslinje: 20 virkedager.','Morild Bank’s own guideline: 20 business days.') };
+  if(bankImp){
+    return set('autbank', Object.assign({ cls:'t-autbank', title:L('Autorisert betaling etter bank-imitasjon','Authorised payment after bank impersonation'),
+      steps: LANG==='en' ? [
+        'The customer approved the payment after being deceived by someone posing as Morild Bank.',
+        'Current law has no statutory right to a refund for authorised payments.',
+        'Assess whether the consent was valid. The Financial Services Complaints Board has in some cases treated manipulated consent as unauthorised.',
+        'Assess whether the bank should have stopped the payment, for example after an alert from fraud monitoring or a mismatch in the payee name check.' ] : [
+        'Kunden godkjente betalingen selv etter å ha blitt lurt av noen som utga seg for å være Morild Bank.',
+        'Gjeldende rett har ingen lovfestet refusjonsrett for autoriserte betalinger.',
+        'Vurder om samtykket var gyldig. Finansklagenemnda har i enkelte saker behandlet manipulert samtykke som uautorisert.',
+        'Vurder om banken burde ha stanset betalingen, for eksempel ved varsel fra svindelovervåkningen eller avvik i navnekontrollen.' ],
+      basis:L('Finansavtaleloven, alminnelig aktsomhetsplikt. HR-2024-990-A, FinKN 2024-309 og FinKN 2026-5. Blir omfattet av PSR-refusjonsretten når regelverket gjelder i Norge.','Financial Contracts Act, general duty of care. HR-2024-990-A, FinKN 2024-309 and FinKN 2026-5. Will be covered by the PSR refund right once the rules apply in Norway.') }, internal));
+  }
+  const why = c.avsender === 'bank' ? L('Svindleren utga seg for å være banken, men via en kanal som ikke tilskrives banken. Det gir ikke refusjonsrett etter PSR.','The fraudster posed as the bank, but via a channel not attributed to the bank. That gives no refund right under PSR.')
+            : c.avsender === 'politi' ? L('Svindleren utga seg for å være politiet. Det dekkes ikke av PSR-refusjonen, som bare gjelder imitasjon av kundens egen bank.','The fraudster posed as the police. This is not covered by the PSR refund, which only applies to impersonation of the customer’s own bank.')
+            : c.avsender === 'invest' ? L('Investeringssvindel dekkes ikke av PSR-refusjonen.','Investment fraud is not covered by the PSR refund.')
+            : L('Svindelen gjelder ikke imitasjon av kundens egen bank.','The fraud does not involve impersonation of the customer’s own bank.');
+  return set('annen', Object.assign({ cls:'t-annen', title:L('Autorisert betaling, annen svindeltype','Authorised payment, other fraud type'),
+    steps:[ L('Kunden godkjente betalingen selv.','The customer approved the payment.'), why,
+            c.avsender === 'politi' ? L('Vurder likevel om samtykket var gyldig. I FinKN 2024-309 (falsk Kripos) fikk kunden medhold fordi samtykket ble ansett som ugyldig.','Still assess whether the consent was valid. In FinKN 2024-309 (fake Kripos) the customer won because the consent was considered invalid.') : L('Vurder om banken burde ha stanset betalingen ut fra signaler i overvåkningen.','Assess whether the bank should have stopped the payment based on monitoring signals.'),
+            L('Prioriter tilbakekall fra mottakerbanken.','Prioritise recall from the receiving bank.') ],
+    basis:L('Finansavtaleloven, alminnelig aktsomhetsplikt. HR-2024-990-A og FinKN 2026-5','Financial Contracts Act, general duty of care. HR-2024-990-A and FinKN 2026-5') + (c.avsender==='politi' ? ', FinKN 2024-309.' : '.') }, internal));
+}
+
+// ---------- Forslag til beslutning ----------
+function suggest(c, t = triage(c)){
+  const i = c.ind; const grov = i.koder && (i.advarsel || i.gjentatt); const objektiv = i.advarsel && i.gjentatt;
+  if(t.regime === 'uaut'){
+    if(i.forsett) return { k:'avslatt', amount:0, title:L('Avslå: mistanke om forsett','Reject: suspected intent'), why:[L('Det er indikasjoner på at kunden selv har medvirket. Dokumenter grunnlaget og meld forholdet til politiet.','There are indications that the customer took part. Document the grounds and report the matter to the police.')] };
+    if(grov) return { k:'delvis', amount:Math.max(0, c.belop-12000), title:L(`Refunder ${nok(Math.max(0,c.belop-12000))} (egenandel 12 000 kr)`,`Refund ${nok(Math.max(0,c.belop-12000))} (excess NOK 12,000)`),
+      why:[ L('Kunden har delt BankID-kode' + (i.advarsel ? ' og overstyrt en advarsel' : ' og latt flere betalinger gå'), 'The customer shared a BankID code' + (i.advarsel ? ' and overrode a warning' : ' and let several payments go through')),
+            L('Det tilsier grov uaktsomhet, men ikke forsett. Jf. HR-2022-1752-A.','This indicates gross negligence, but not intent. See HR-2022-1752-A.') ] };
+    return { k:'refundert', amount:Math.max(0, c.belop-450), title:L(`Refunder ${nok(Math.max(0,c.belop-450))} (egenandel 450 kr)`,`Refund ${nok(Math.max(0,c.belop-450))} (excess NOK 450)`), why:[L('Ingen tegn til grov uaktsomhet. Hovedregelen om tilbakeføring gjelder.','No signs of gross negligence. The main rule on refunds applies.')] };
+  }
+  if(t.regime === 'psr'){
+    if(!c.politi) return { k:'venter-politi', amount:0, title:L('Be kunden levere politianmeldelse','Ask the customer for a police report'), why:[L('Refusjonsretten forutsetter at kunden har meldt saken til politiet. Fristen starter når anmeldelsen er mottatt.','The refund right requires the customer to have reported the matter to the police. The deadline starts when the report is received.')] };
+    if(objektiv) return { k:'avslatt', amount:0, title:L('Vurder begrunnet avslag','Consider a justified refusal'), why:[L('Kunden overstyrte en konkret advarsel og gjennomførte flere betalinger.','The customer overrode a specific warning and made several payments.'), L('Gi kunden anledning til å forklare seg før beslutning. Opplys om Finansklagenemnda ved avslag.','Give the customer a chance to explain before deciding. Inform about the complaints board if refused.')] };
+    return { k:'refundert', amount:c.belop, title:L(`Refunder hele beløpet (${nok(c.belop)})`,`Refund the full amount (${nok(c.belop)})`), why:[L('Vilkårene er oppfylt: imitasjon av banken via bankens kanal, varsel og politianmeldelse foreligger.','The conditions are met: impersonation of the bank via the bank’s channel, notification and police report are in place.'), L('Ingen objektive grunner til å mistenke grov uaktsomhet.','No objective grounds to suspect gross negligence.')] };
+  }
+  if(t.regime === 'autbank' || t.regime === 'annen'){
+    if(i.overvaking || i.vop){
+      const sig = LANG==='en' ? [i.overvaking && 'fraud monitoring raised an alert', i.vop && 'the payee name check showed a mismatch'].filter(Boolean).join(' and ')
+                              : [i.overvaking && 'svindelovervåkningen ga varsel', i.vop && 'navnekontrollen viste avvik'].filter(Boolean).join(' og ');
+      return { k:'vurdering', amount:0, title:L('Vurder bankens ansvar','Assess the bank\u2019s liability'), why:[
+        L(`Bankens egne signaler: ${sig}, uten at betalingen ble stanset.`,`The bank\u2019s own signals: ${sig}, without the payment being stopped.`),
+        L('Finansklagenemnda har gitt banken ansvar fra tidspunktet den hadde klar mistanke, med reduksjon for kundens egen skyld (FinKN 2026-5). Beløpet fastsettes konkret i saken.','The complaints board has held the bank liable from the point it had clear suspicion, reduced for the customer\u2019s own fault (FinKN 2026-5). The amount is set case by case.')] };
+    }
+    if(c.avsender === 'politi') return { k:'vurdering', amount:0, title:L('Vurder om samtykket var gyldig','Assess whether the consent was valid'), why:[L('Se FinKN 2024-309. Kunden ble isolert fra banken og presset av falsk politietterforsker.','See FinKN 2024-309. The customer was isolated from the bank and pressured by a fake police investigator.')] };
+    return { k:'avslatt', amount:0, title:L('Avslå med begrunnelse','Reject with reasons'), why:[L('Ingen lovfestet refusjonsrett, og ingen signaler som tilsier at banken burde ha stanset betalingen.','No statutory refund right, and no signals suggesting the bank should have stopped the payment.'), L('Opplys om Finansklagenemnda og fortsett tilbakekall fra mottakerbank.','Inform about the complaints board and continue the recall from the receiving bank.')] };
+  }
+  return { k:'vurdering', amount:0, title:L('Avklar hvem som utførte betalingen','Clarify who made the payment'), why:[L('Regelverket kan ikke fastsettes før dette er klart.','The applicable rules cannot be set until this is clear.')] };
+}
+
+function deadlineInfo(c, t = triage(c)){
+  if(!OPEN.has(c.status)) return { cls:'', txt:c.avgjort ? L(`Avgjort ${fmtDs(c.avgjort)}`, `Decided ${fmtDs(c.avgjort)}`) : L('Avsluttet','Closed'), left:null };
+  if(!t.frist) return { cls:'warn', txt:L('Klokka står','Clock paused'), left:null };
+  const left = bizBetween(TODAY, t.frist);
+  const txt = left < 0 ? L(`${-left} virkedag${-left===1?'':'er'} over frist`, `${-left} business day${-left===1?'':'s'} overdue`)
+            : left === 0 ? L('Frist i dag','Due today') : L(`${left} virkedag${left===1?'':'er'} igjen`, `${left} business day${left===1?'':'s'} left`);
+  return { cls: left <= 0 ? 'bad' : left <= 3 ? 'warn' : '', txt, left };
+}
+// ---------- Innhold: behov fra workshop ----------
+const NEEDS = [
+  { k:'B1', t:['Én samlet saksflyt for svindelkrav','One workflow for fraud claims'],
+    d:['I dag spres sakene på e-post, regneark og tre fagsystemer. Ingen har oversikt over status.','Today cases are spread across email, spreadsheets and three systems. Nobody has an overview of status.'],
+    how:['Alle krav på kontobetalinger registreres og følges i én kø, med status, ansvarlig og hendelseslogg.','All claims on account payments are registered and tracked in one queue, with status, owner and event log.'],
+    gain:['Kortere behandlingstid og mindre dobbeltarbeid. Leder ser hele porteføljen.','Shorter handling time and less duplicate work. Managers see the whole portfolio.'], link:'#saker', lt:['Saksoversikten','Case overview'] },
+  { k:'B2', t:['Riktig regelverk i hver sak','The right rules in every case'],
+    d:['Saksbehandlerne er usikre på når betalingen er uautorisert, når grov uaktsomhet gjelder og hva PSR vil endre.','Case handlers are unsure when a payment is unauthorised, when gross negligence applies and what PSR will change.'],
+    how:['Regelverksvurderingen foreslår regelverk ut fra hvem som utførte betalingen, hvem svindleren utga seg for å være og hvilken kanal som ble brukt.','Rules triage suggests the regime based on who made the payment, who the fraudster posed as and which channel was used.'],
+    gain:['Lik behandling av like saker. Færre feil som ender i Finansklagenemnda.','Similar cases are treated alike. Fewer errors ending up at the complaints board.'], link:'#nytt-krav', lt:['Registrer krav','Register claim'] },
+  { k:'B3', t:['Kontroll på frister','Control of deadlines'],
+    d:['Tilbakeføring ved uautoriserte betalinger skal skje senest neste virkedag. PSR innfører 15 virkedager for refusjon eller avslag.','Refunds of unauthorised payments must be made by the next business day. PSR introduces 15 business days for refund or refusal.'],
+    how:['Fristklokke per sak som regner norske virkedager og starter på riktig tidspunkt (for eksempel når politianmeldelse er mottatt).','A deadline clock per case that counts Norwegian business days and starts at the right time (for example when the police report is received).'],
+    gain:['Ingen oversittede frister og mindre risiko for kritikk fra Finanstilsynet.','No missed deadlines and less risk of criticism from the FSA.'], link:'#saker', lt:['Frister i køen','Deadlines in the queue'] },
+  { k:'B4', t:['Samlet bevisbilde','A complete evidence picture'],
+    d:['Bevis hentes manuelt fra svindelovervåkning, nettbanklogger og navnekontroll. Det tar tid og blir ofte ufullstendig.','Evidence is collected manually from fraud monitoring, online banking logs and the payee name check. It takes time and is often incomplete.'],
+    how:['Bevis hentes automatisk fra bankens egne kilder: varsler fra svindelovervåkningen, navnekontroll mot mottakerkonto, enhetsdata og signal om falskt nummer fra teleoperatør.','Evidence is collected automatically from the bank’s own sources: fraud monitoring alerts, payee name check, device data and spoofed-number signals from telecom operators.'],
+    gain:['Raskere og bedre begrunnede beslutninger. Bevisbyrden etter PSR kan løftes.','Faster and better-reasoned decisions. The burden of proof under PSR can be met.'], link:'#saker', lt:['Bevis i en sak','Evidence in a case'] },
+  { k:'B5', t:['Beslutninger som tåler klagebehandling','Decisions that stand up to appeal'],
+    d:['Avslag mangler ofte en tydelig begrunnelse. Morild Bank hadde rundt 30 saker i Finansklagenemnda i fjor.','Refusals often lack clear reasons. Morild Bank had around 30 cases at the complaints board last year.'],
+    how:['Forslag til beslutning med begrunnelse knyttet til lov og praksis, og brevutkast med informasjon om klageadgang.','Suggested decisions with reasons tied to law and practice, and draft letters with information on the right to complain.'],
+    gain:['Færre klager og sterkere stilling i de sakene som går til nemnda.','Fewer complaints and a stronger position in cases that go to the board.'], link:'#saker', lt:['Beslutning og brev','Decision and letter'] },
+  { k:'B6', t:['Rapportering og læring','Reporting and learning'],
+    d:['Halvårsrapporteringen til Finanstilsynet settes sammen manuelt. Mønstre deles sjelden med telekom og andre banker.','Half-yearly reporting to the FSA is compiled manually. Patterns are rarely shared with telecoms and other banks.'],
+    how:['Innsikt per svindeltype, kanal og påstått avsender, utkast til rapportering, og logg over signaler til teleoperatører.','Insights by fraud type, channel and claimed sender, draft reporting, and a log of signals to telecom operators.'],
+    gain:['Mindre manuelt rapportarbeid og bedre grunnlag for forebygging.','Less manual reporting work and a better basis for prevention.'], link:'#innsikt', lt:['Innsikt og rapportering','Insights and reporting'] },
+  { k:'B7', t:['Klar for PSR uten nytt system','Ready for PSR without a new system'],
+    d:['Banken vil ikke bygge noe som må erstattes når PSR gjelder i Norge.','The bank does not want to build something that must be replaced when PSR applies in Norway.'],
+    how:['Regelverket er konfigurerbart. PSR-regler kan slås på når de gjelder i Norge, uten å endre saksflyten.','The rules are configurable. PSR rules can be switched on when they apply in Norway, without changing the workflow.'],
+    gain:['Investeringen beholder verdien. Overgangen til PSR blir en konfigurasjonsendring.','The investment keeps its value. Moving to PSR becomes a configuration change.'], link:'#saker', lt:['Bryteren «PSR (simulert)»','The "PSR (simulated)" switch'] }
+];
+const N = (n, k) => L(n[k][0], n[k][1]);
+
+// ---------- Business case ----------
+const BC_DEF = { krav:420, tidNa:6, tidNy:2.5, timekost:850, klager:30, klagerRed:30, klageKost:30000, svindlet:17, tilbake:4, lisens:950000, engang:1400000 };
+let BC = store.get('cg_bc', {...BC_DEF});
+function bcCalc(p){
+  const tid = p.krav * (p.tidNa - p.tidNy) * p.timekost;
+  const klage = p.klager * (p.klagerRed/100) * p.klageKost;
+  const tilb = p.svindlet*1e6 * (p.tilbake/100);
+  const brutto = tid + klage + tilb; const netto = brutto - p.lisens;
+  const payback = netto > 0 ? p.engang / netto * 12 : null;
+  const fem = netto*5 - p.engang;
+  return { tid, klage, tilb, brutto, netto, payback, fem, timer: p.krav*(p.tidNa-p.tidNy) };
+}
+const BCFMT = {
+  krav:v=>v, tidNa:v=>dec(v)+L(' t',' h'), tidNy:v=>dec(v)+L(' t',' h'), timekost:v=>nok(v), klager:v=>v, klagerRed:v=>v+' %',
+  klageKost:v=>nok(v), svindlet:v=>L(v+' mill. kr','NOK '+v+'m'), tilbake:v=>L(v+' %-poeng',v+' pp'), lisens:v=>nok(v), engang:v=>nok(v)
+};
+
+// ---------- Ruting ----------
+const ROUTES = { forslag:vForslag, behov:vBehov, 'veien-videre':vVeien, om:vOm, saker:vSaker, 'nytt-krav':vNytt, innsikt:vInnsikt };
+const PROP = ['forslag','behov','veien-videre','om'];
+function render(){
+  applyShell();
+  const h = (location.hash || '#forslag').slice(1);
+  let key = h, html;
+  const root = 'ScamCase Enterprise › ';
+  if(h.startsWith('sak-') && byId(h.slice(4))){ key = 'saker'; html = vSak(byId(h.slice(4))); $('#crumb').innerHTML = `${root}${S('grpDemo')} › ${S('saker')} › <b>${esc(h.slice(4))}</b>`; }
+  else { if(!ROUTES[key]) key = 'forslag'; html = ROUTES[key]();
+    $('#crumb').innerHTML = PROP.includes(key) ? `${root}${S('grpProposal')} › <b>${S(key)}</b>` : `${root}${S('grpDemo')} › <b>${S(key)}</b>`; }
+  const prop = PROP.includes(key);
+  const v = $('#view'); v.className = 'content view' + (prop ? ' narrow' : ''); v.innerHTML = html;
+  $('.regime').hidden = prop || key === 'innsikt';
+  $$('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.v === key ? 'page' : 'false'));
+  $('#cntOpen').textContent = CASES.filter(c => OPEN.has(c.status)).length;
+  $('#modeNow').setAttribute('aria-pressed', MODE==='now'); $('#modePsr').setAttribute('aria-pressed', MODE==='psr');
+  (AFTER[key] || (()=>{}))(h);
+  if(render._last !== h){ window.scrollTo(0,0); render._last = h; }
+}
+const AFTER = {};
+const sampleBanner = () => `<div class="sample"><b>${L('Eksempeldata','Sample data')}</b><span>${L('Slik kan det se ut etter noen måneders bruk. Morild Bank bruker ikke løsningen i dag, og alle kunder og saker er oppdiktet.','This is how it could look after a few months of use. Morild Bank does not use the solution today, and all customers and cases are made up.')}</span></div>`;
+
+// ---------- Visning: Introduksjon ----------
+function vForslag(){
+  return `<div class="stack-l">
+  <section class="hero">
+    <div class="stack">
+      <span class="eyebrow">${S('grpProposal')}</span>
+      <h1>${L('Løsningsforslag til Morild Bank: saksbehandling av svindelkrav','Solution proposal for Morild Bank: handling fraud claims')}</h1>
+      <p class="lede">${L('På workshopen beskrev Morild Bank et økende antall krav fra kunder som er lurt av svindlere som utgir seg for å være banken. Sakene tar lang tid, regelverket er uklart, og PSR vil gi kundene en lovfestet rett til refusjon. ScamCase Enterprise samler kravene i én saksflyt, foreslår riktig regelverk, holder fristene og dokumenterer beslutningene.',
+        'At the workshop, Morild Bank described a growing number of claims from customers deceived by fraudsters posing as the bank. Cases take a long time, the rules are unclear, and PSR will give customers a statutory right to a refund. ScamCase Enterprise gathers the claims in one workflow, suggests the right rules, keeps the deadlines and documents the decisions.')}</p>
+    </div>
+    <div class="panel"><dl class="meta">
+      <dt>${L('Kunde','Customer')}</dt><dd>${L('Morild Bank (ca. 250 000 personkunder)','Morild Bank (approx. 250,000 retail customers)')}</dd>
+      <dt>${L('Grunnlag','Basis')}</dt><dd>${L('Workshop med svindelteam, kundeservice, compliance og IT','Workshop with the fraud team, customer service, compliance and IT')}</dd>
+      <dt>${L('Omfang','Scope')}</dt><dd>${L('Svindelkrav på kontobetalinger fra personkunder','Fraud claims on account payments from retail customers')}</dd>
+      <dt>${L('Bygger på','Builds on')}</dt><dd>${L('Svindelovervåkning, navnekontroll mot mottakerkonto og Case Desk fra Kystlys Software','Fraud monitoring, payee name check and Case Desk from Kystlys Software')}</dd>
+      <dt>${L('Status','Status')}</dt><dd>${L('Forslag til pilot','Pilot proposal')}</dd>
+    </dl></div>
+  </section>
+
+  <section class="stack">
+    <div class="panel-h"><h2>${L('Behovene fra workshopen og hvordan demoen svarer','Needs from the workshop and how the demo responds')}</h2></div>
+    <div class="needs">${NEEDS.map(n => `<div class="need"><span class="k">${n.k}</span><h3>${N(n,'t')}</h3><p>${N(n,'how')}</p><a href="${n.link}">${L('Vis i demo','Show in demo')}: ${N(n,'lt')} →</a></div>`).join('')}</div>
+  </section>
+
+  <section class="stack">
+    <h2>${L('Slik går demoen','How the demo runs')}</h2>
+    <div class="steps">
+      <div class="step on"><span class="eyebrow">${L('Steg','Step')} 1</span><h3>${S('saker')}</h3><p>${L('Køen med frister, regelverk og status for alle åpne krav.','The queue with deadlines, rules and status for all open claims.')}</p></div>
+      <div class="step on"><span class="eyebrow">${L('Steg','Step')} 2</span><h3>${L('Ingrid Solheims sak','Ingrid Solheim’s case')}</h3><p>${L('Bank-imitasjon med falskt nummer. Bytt til «PSR (simulert)» og se hvordan regelverk og frist endres.','Bank impersonation with a spoofed number. Switch to "PSR (simulated)" and see how rules and deadline change.')}</p></div>
+      <div class="step on"><span class="eyebrow">${L('Steg','Step')} 3</span><h3>${S('nytt-krav')}</h3><p>${L('Svarene gir regelverk og frist fortløpende, før saken lagres.','The answers give rules and deadline as you go, before the case is saved.')}</p></div>
+      <div class="step on"><span class="eyebrow">${L('Steg','Step')} 4</span><h3>${S('innsikt')}</h3><p>${L('Mønstre, rapportering til Finanstilsynet og signaler til teleoperatører.','Patterns, reporting to the FSA and signals to telecom operators.')}</p></div>
+    </div>
+  </section>
+
+  <section class="grid3">
+    <div class="kpi"><span class="v">${L('962 mill. kr','NOK 962m')}</span><span class="l">${L('svindlet i Norge i 2025 (Finanstilsynet)','defrauded in Norway in 2025 (Finanstilsynet)')}</span></div>
+    <div class="kpi"><span class="v">52 %</span><span class="l">${L('av svindlet beløp i 2. halvår 2025 var sosial manipulasjon','of the amount defrauded in H2 2025 was social engineering')}</span></div>
+    <div class="kpi"><span class="v">834</span><span class="l">${L('svindelklager til Finansklagenemnda i 2025','fraud complaints to the Financial Services Complaints Board in 2025')}</span></div>
+  </section>
+  </div>`;
+}
+
+// ---------- Visning: Fra behov til løsning + business case ----------
+function vBehov(){
+  const sl = (k, label, min, max, step, hint) => `<div class="slider"><label for="bc_${k}">${label}</label><output id="o_${k}">${BCFMT[k](BC[k])}</output><input type="range" id="bc_${k}" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${BC[k]}">${hint?`<small>${hint}</small>`:''}</div>`;
+  return `<div class="stack-l">
+  <div class="stack"><span class="eyebrow">${S('grpProposal')}</span><h1>${S('behov')}</h1>
+  <p class="lede">${L('Hvert behov fra workshopen er koblet til en funksjon i ScamCase Enterprise og en gevinst for Morild Bank. Business caset under er et regneeksempel som kalibreres med bankens egne tall i piloten.','Each need from the workshop is linked to a feature in ScamCase Enterprise and a benefit for Morild Bank. The business case below is a worked example to be calibrated with the bank’s own figures in the pilot.')}</p></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>${L('Behov fra workshopen','Need from the workshop')}</th><th>${L('Slik dekker ScamCase Enterprise det','How ScamCase Enterprise covers it')}</th><th>${L('Hva Morild Bank får ut av det','What Morild Bank gets out of it')}</th></tr></thead>
+    <tbody>${NEEDS.map(n => `<tr><td style="min-width:210px"><span class="mono" style="color:var(--accent)">${n.k}</span> <b>${N(n,'t')}</b><div class="muted" style="font-size:13px; margin-top:4px">${N(n,'d')}</div></td><td style="min-width:240px">${N(n,'how')}<div style="margin-top:6px"><a href="${n.link}" style="font-size:13px; font-weight:600">${N(n,'lt')} →</a></div></td><td style="min-width:200px">${N(n,'gain')}</td></tr>`).join('')}</tbody>
+  </table></div>
+
+  <section class="stack">
+    <div class="panel-h"><h2>Business case</h2><button class="btn sm" type="button" id="bcReset">${L('Tilbakestill forutsetninger','Reset assumptions')}</button></div>
+    <div class="note"><b>${L('Forutsetninger','Assumptions')}</b><span>${L('Volumene er anslått ut fra nasjonale tall (Finanstilsynet og Finansklagenemnda 2025) skalert til en bank med rundt 3,5 % av personmarkedet. Pris og innføringskost er indikative. Juster forutsetningene under.','Volumes are estimated from national figures (Finanstilsynet and the complaints board, 2025) scaled to a bank with around 3.5% of the retail market. Price and implementation cost are indicative. Adjust the assumptions below.')}</span></div>
+    <div class="bc">
+      <div class="panel"><h3>${L('Forutsetninger','Assumptions')}</h3>
+        ${sl('krav',L('Svindelkrav på kontobetalinger per år','Fraud claims on account payments per year'),100,1200,10,L('Anslag: ca. 3,5 % av norske saker med sosial manipulasjon','Estimate: approx. 3.5% of Norwegian social engineering cases'))}
+        ${sl('tidNa',L('Timer per sak i dag','Hours per case today'),2,12,0.5)}
+        ${sl('tidNy',L('Timer per sak med ScamCase Enterprise','Hours per case with ScamCase Enterprise'),1,8,0.5,L('Bevis hentes automatisk, brev genereres','Evidence is collected automatically, letters are generated'))}
+        ${sl('timekost',L('Intern timekost','Internal hourly cost'),500,1500,50)}
+        ${sl('klager',L('Saker til Finansklagenemnda per år','Complaints board cases per year'),0,100,1)}
+        ${sl('klagerRed',L('Færre klagesaker','Fewer complaint cases'),0,60,5,L('Bedre begrunnede avgjørelser','Better-reasoned decisions'))}
+        ${sl('klageKost',L('Intern kost per klagesak','Internal cost per complaint case'),5000,80000,1000)}
+        ${sl('svindlet',L('Svindlet beløp per år (sosial manipulasjon)','Amount defrauded per year (social engineering)'),2,60,1)}
+        ${sl('tilbake',L('Økt andel tilbakeført fra mottakerbank','Increase in share recovered from receiving bank'),0,15,1,L('Raskere tilbakekall via Kystlys Case Desk','Faster recall via Kystlys Case Desk'))}
+        ${sl('lisens',L('Årlig lisens og drift','Annual licence and operations'),300000,3000000,50000)}
+        ${sl('engang',L('Engangskost innføring','One-off implementation cost'),300000,4000000,100000)}
+      </div>
+      <div class="panel" id="bcOut"></div>
+    </div>
+  </section>
+  </div>`;
+}
+function bcRender(){
+  const r = bcCalc(BC); const max = Math.max(r.brutto, 1);
+  $('#bcOut').innerHTML = `<h3>${L('Årlig effekt','Annual effect')}</h3>
+    <div class="bcbar" aria-hidden="true" style="margin:10px 0 6px"><i style="width:${r.tid/max*100}%; background:var(--accent)"></i><i style="width:${r.klage/max*100}%; background:var(--glow)"></i><i style="width:${r.tilb/max*100}%; background:var(--info)"></i></div>
+    <div class="legend" style="margin-bottom:8px"><span><i style="background:var(--accent)"></i>${L('Spart tid','Time saved')}</span><span><i style="background:var(--glow)"></i>${L('Færre klagesaker','Fewer complaints')}</span><span><i style="background:var(--info)"></i>${L('Mer tilbakeført','More recovered')}</span></div>
+    <div class="bcline"><span>${L(`Spart saksbehandlingstid (${Math.round(r.timer).toLocaleString('nb-NO')} timer, ca. ${dec(r.timer/1650)} årsverk)`,`Case handling time saved (${Math.round(r.timer).toLocaleString('en-GB')} hours, approx. ${dec(r.timer/1650)} FTE)`)}</span><span>${nok(r.tid)}</span></div>
+    <div class="bcline"><span>${L('Færre saker i Finansklagenemnda','Fewer complaints board cases')}</span><span>${nok(r.klage)}</span></div>
+    <div class="bcline"><span>${L('Mer tilbakeført fra mottakerbank','More recovered from receiving banks')}</span><span>${nok(r.tilb)}</span></div>
+    <div class="bcline"><span>${L('Brutto årlig gevinst','Gross annual benefit')}</span><span>${nok(r.brutto)}</span></div>
+    <div class="bcline"><span>${L('Årlig lisens og drift','Annual licence and operations')}</span><span>− ${nok(BC.lisens)}</span></div>
+    <div class="bcline tot"><span>${L('Netto årlig gevinst','Net annual benefit')}</span><span style="color:${r.netto>=0?'var(--ok)':'var(--bad)'}">${nok(r.netto)}</span></div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="kpi"><span class="v">${r.payback ? Math.ceil(r.payback)+L(' mnd',' mo') : '–'}</span><span class="l">${L('Tilbakebetalingstid for engangskost','Payback time for one-off cost')}</span></div>
+      <div class="kpi"><span class="v">${mill(r.fem)}</span><span class="l">${L('Netto over fem år','Net over five years')}</span></div>
+    </div>
+    <p class="muted" style="font-size:12.5px; margin-top:12px">${L('Ikke tallfestet: lavere risiko for sanksjoner ved fristbrudd, bedre kundeopplevelse, og at investeringen gjenbrukes når PSR gjelder i Norge.','Not quantified: lower risk of sanctions for missed deadlines, better customer experience, and reuse of the investment when PSR applies in Norway.')}</p>`;
+}
+AFTER.behov = () => {
+  bcRender();
+  $$('.bc input[type=range]').forEach(inp => inp.addEventListener('input', () => {
+    const k = inp.dataset.k; BC[k] = Number(inp.value); store.set('cg_bc', BC);
+    $('#o_'+k).textContent = BCFMT[k](BC[k]); bcRender();
+  }));
+  $('#bcReset').addEventListener('click', () => { BC = {...BC_DEF}; store.set('cg_bc', BC); render(); toast(L('Forutsetningene er tilbakestilt','The assumptions have been reset')); });
+};
+
+// ---------- Visning: Veien videre ----------
+function vVeien(){
+  const W = 26;
+  const bar = (s, e, cls='') => `<div class="track"><div class="bar ${cls}" style="left:${s/W*100}%; width:${(e-s)/W*100}%"></div></div>`;
+  const wk = L('Uke','Week');
+  const lab = (t, s, e, d) => `<span class="lab">${t}<small>${wk} ${s}–${e} · ${d}</small></span>`;
+  const li = a => `<ul style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px; font-size:14px">${a.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  const rows = [
+    [L('<b>Historiske svindelsaker</b>, 12–24 måneder, pseudonymisert','<b>Historical fraud cases</b>, 12–24 months, pseudonymised'), L('Kalibrere regelverksvurdering og business case, teste forslag mot faktiske avgjørelser','Calibrate triage and business case, test suggestions against actual decisions'), L('Saksarkiv, regneark, e-post','Case archive, spreadsheets, email')],
+    [L('<b>Transaksjonsdata</b> for omtvistede betalinger','<b>Transaction data</b> for disputed payments'), L('Beløp, tidspunkt, mottakerkonto og -bank','Amount, time, payee account and bank'), L('Kjernebank','Core banking')],
+    [L('<b>Varsler fra svindelovervåkningen</b>','<b>Fraud monitoring alerts</b>'), L('Bevis: hadde banken signaler før betalingen?','Evidence: did the bank have signals before the payment?'), L('Kystlys svindelovervåkning (kontobetalinger)','Kystlys fraud monitoring (account payments)')],
+    [L('<b>Resultat fra navnekontroll</b> mot mottakerkonto','<b>Payee name check results</b>'), L('Bevis: fikk kunden varsel om avvik?','Evidence: was the customer warned of a mismatch?'), 'Verification of Payee'],
+    [L('<b>Innloggings- og enhetsdata</b>','<b>Login and device data</b>'), L('Avklare om kunden eller svindleren utførte betalingen','Clarify whether the customer or the fraudster made the payment'), L('Nettbank, mobilbank, BankID-logg','Online banking, mobile banking, BankID log')],
+    [L('<b>Kundekontakt</b>','<b>Customer contact</b>'), L('Kundens forklaring og kanal for henvendelsen','The customer’s explanation and contact channel'), L('CRM og kundesenter','CRM and customer centre')],
+    [L('<b>Interne retningslinjer og brevmaler</b>','<b>Internal guidelines and letter templates</b>'), L('Regler for grov uaktsomhet, egenandel og svarbrev','Rules for gross negligence, excess and response letters'), L('Compliance og juridisk','Compliance and legal')]
+  ];
+  return `<div class="stack-l">
+  <div class="stack"><span class="eyebrow">${S('grpProposal')}</span><h1>${S('veien-videre')}</h1>
+  <p class="lede">${L('Vi foreslår en avgrenset pilot på 12 uker med svindelteamet. Målet er å bevise effekten med bankens egne saker før Morild Bank tar stilling til full innføring.','We propose a limited 12-week pilot with the fraud team. The goal is to prove the effect on the bank’s own cases before Morild Bank decides on a full rollout.')}</p></div>
+
+  <section class="grid2">
+    <div class="panel"><h3>${L('Pilotens omfang','Pilot scope')}</h3>${li(LANG==='en' ? ['Fraud claims on account payments from retail customers','The fraud team: 6 case handlers and a team lead','First four weeks in parallel with current routines','Rules: current law. PSR rules are tested in simulated mode.','Card claims are excluded. They are already handled in Kystlys’ card dispute service.']
+      : ['Svindelkrav på kontobetalinger fra personkunder','Svindelteamet: 6 saksbehandlere og teamleder','Fire første uker i parallell med dagens rutiner','Regelverk: gjeldende rett. PSR-reglene testes i simulert modus.','Kortkrav holdes utenfor. De behandles allerede i Kystlys\' tjeneste for korttvister.'])}</div>
+    <div class="panel"><h3>${L('Suksesskriterier','Success criteria')}</h3>${li(LANG==='en' ? ['Handling time per case down at least 40%','No missed refund deadlines','All refusals have documented reasons and information on the right to complain','Rules triage matches the expert’s assessment in at least 90% of cases','Case handlers want to keep using the solution']
+      : ['Behandlingstid per sak ned minst 40 %','Ingen oversittede frister for tilbakeføring','Alle avslag har dokumentert begrunnelse og informasjon om klageadgang','Regelverksvurderingen stemmer med fagansvarligs vurdering i minst 90 % av sakene','Saksbehandlerne vil fortsette å bruke løsningen'])}</div>
+  </section>
+
+  <section class="stack"><h2>${L('Data Morild Bank må levere','Data Morild Bank must provide')}</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>${L('Data','Data')}</th><th>${L('Bruk i piloten','Use in the pilot')}</th><th>${L('Kilde hos banken','Source at the bank')}</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}
+    </tbody></table></div>
+  </section>
+
+  <section class="stack"><h2>${L('Kobling mot bankens systemer','Integration with the bank’s systems')}</h2>
+    <div class="panel arch">${archSvg()}</div>
+    <p class="muted" style="font-size:13px">${L('I piloten leses data fra eksisterende kilder. ScamCase Enterprise skriver bare til egne saker, og tilbakeføring til kunde gjøres i kjernebanken etter beslutning.','In the pilot, data is read from existing sources. ScamCase Enterprise only writes to its own cases, and refunds to customers are made in core banking after a decision.')}</p>
+  </section>
+
+  <section class="stack"><h2>${L('Grov fremdrift','Outline timeline')}</h2>
+    <div class="panel"><div class="gantt">
+      <span></span><div class="scale">${[0,4,8,12,16,20,26].map(w => `<span style="left:${w/W*100}%">${w===0?wk+' 0':w}</span>`).join('')}</div>
+      ${lab(L('Avklaring og avtale','Clarification and agreement'),0,3,L('DPIA, data, pilotavtale','DPIA, data, pilot agreement'))}${bar(0,3)}
+      ${lab(L('Oppsett og integrasjon','Setup and integration'),3,7,L('kilder, regler, brevmaler','sources, rules, letter templates'))}${bar(3,7)}
+      ${lab(L('Pilot i drift','Pilot in operation'),7,19,L('12 uker, de 4 første i parallell','12 weeks, the first 4 in parallel'))}${bar(7,19,'alt')}
+      ${lab(L('Evaluering og beslutning','Evaluation and decision'),19,22,L('måling mot kriteriene','measured against the criteria'))}${bar(19,22)}
+      ${lab(L('Utrulling','Rollout'),22,26,L('hele kundesenteret','the whole customer centre'))}${bar(22,26)}
+    </div></div>
+    <div class="note"><b>${L('PSR-aktivering','PSR activation')}</b><span>${L('Ligger utenfor pilotplanen. PSR gjelder i EU anslagsvis fra slutten av 2028, og i Norge først etter at forordningen er tatt inn i EØS-avtalen. Da slås PSR-reglene på i ScamCase Enterprise som en konfigurasjonsendring.','Outside the pilot plan. PSR is expected to apply in the EU from around late 2028, and in Norway only after the regulation is incorporated into the EEA Agreement. The PSR rules are then switched on in ScamCase Enterprise as a configuration change.')}</span></div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel"><h3>${L('Roller','Roles')}</h3><dl class="meta" style="font-size:14px">
+      <dt>Morild Bank</dt><dd>${L('Produkteier, leder for svindelteamet, compliance og jurist, IT-arkitekt, personvernombud','Product owner, fraud team lead, compliance and legal, IT architect, data protection officer')}</dd>
+      <dt>Kystlys Software</dt><dd>${L('Solution Manager, løsningsarkitekt, integrasjonsutvikler, prosjektleder','Solution Manager, solution architect, integration developer, project manager')}</dd></dl></div>
+    <div class="panel"><h3>${L('Risiko og tiltak','Risks and mitigations')}</h3>${li(LANG==='en' ? [
+      '<b>PSR is not finally published.</b> The rules are configurable and will be updated when the text is final.',
+      '<b>Unclear when PSR applies in Norway.</b> The regulation must be incorporated into the EEA Agreement. The pilot delivers value under current law.',
+      '<b>Data protection.</b> DPIA before start. Sharing with other banks and telecom operators follows the information-sharing rules in force from 1 July 2026.',
+      '<b>Data quality in history.</b> The first week is used for data mapping.']
+      : ['<b>PSR er ikke endelig publisert.</b> Reglene er konfigurerbare og oppdateres når teksten er endelig.',
+      '<b>Uklart når PSR gjelder i Norge.</b> Forordningen må tas inn i EØS-avtalen. Piloten gir gevinst under gjeldende rett.',
+      '<b>Personvern.</b> DPIA før oppstart. Deling med andre banker og teleoperatører skjer etter reglene om informasjonsdeling fra 1.7.2026.',
+      '<b>Datakvalitet i historikk.</b> Første uke brukes på datakartlegging.'])}</div>
+  </section>
+  </div>`;
+}
+function archSvg(){
+  const box = (x,y,w,h,t,s) => `<g><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="var(--surface-2)" stroke="var(--line)"/><text x="${x+w/2}" y="${y+h/2-4}" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">${t}</text><text x="${x+w/2}" y="${y+h/2+13}" text-anchor="middle" font-size="11" fill="var(--muted)">${s}</text></g>`;
+  const ln = (x1,y1,x2,y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--muted)" stroke-width="1.3" marker-end="url(#ah)"/>`;
+  const Ls = LANG==='en' ? [['Core banking','accounts and transactions'],['Fraud monitoring','alerts before payment'],['Payee name check','name mismatch'],['Online and mobile bank','login and device']]
+                         : [['Kjernebank','konto og transaksjoner'],['Svindelovervåkning','varsler før betaling'],['Navnekontroll','avvik mottakernavn'],['Nett- og mobilbank','innlogging og enhet']];
+  const R = LANG==='en' ? [['Kystlys Case Desk','recall to receiving bank'],['Customer dialogue / CRM','explanation and letters'],['Reporting','FSA half-yearly'],['Telecom operator','spoofed-number signal']]
+                        : [['Kystlys Case Desk','tilbakekall til mottakerbank'],['Kundedialog / CRM','forklaring og brev'],['Rapportering','Finanstilsynet halvår'],['Teleoperatør','signal om falskt nummer']];
+  return `<svg viewBox="0 0 900 330" role="img" aria-label="${L('Integrasjoner: kilder til venstre, ScamCase Enterprise i midten, mottakere til høyre','Integrations: sources on the left, ScamCase Enterprise in the middle, recipients on the right')}">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+    <text x="110" y="18" text-anchor="middle" font-size="11" fill="var(--muted)" letter-spacing="1">${L('BANKENS KILDER','BANK SOURCES')}</text>
+    <text x="790" y="18" text-anchor="middle" font-size="11" fill="var(--muted)" letter-spacing="1">${L('UTFALL OG SAMHANDLING','OUTCOMES AND COLLABORATION')}</text>
+    ${Ls.map((b,i)=>box(10,32+i*74,200,56,b[0],b[1])).join('')}
+    ${R.map((b,i)=>box(690,32+i*74,200,56,b[0],b[1])).join('')}
+    <rect x="345" y="95" width="210" height="140" rx="6" fill="var(--accent)"/><text x="450" y="155" text-anchor="middle" font-size="16" font-weight="700" fill="var(--accent-ink)">ScamCase Enterprise</text>
+    <text x="450" y="182" text-anchor="middle" font-size="11.5" fill="var(--accent-ink)">${L('regelverk · frister · bevis','triage · deadlines · evidence')}</text>
+    <text x="450" y="199" text-anchor="middle" font-size="11.5" fill="var(--accent-ink)">${L('beslutning · brev · logg','decision · letter · log')}</text>
+    ${Ls.map((b,i)=>ln(212,60+i*74,343,135+i*20)).join('')}
+    ${R.map((b,i)=>ln(557,135+i*20,688,60+i*74)).join('')}
+  </svg>`;
+}
+
+// ---------- Visning: Om løsningsforslaget ----------
+function vOm(){
+  const src = [
+    ['https://www.finanstilsynet.no/publikasjoner-og-analyser/svindel-og-svindelstatistikk/2025/h2/svindelstatistikk-andre-halvar-2025/', L('Finanstilsynet: Svindelstatistikk 2. halvår 2025','Finanstilsynet: Fraud statistics H2 2025')],
+    ['https://rapport.finkn.no/asset/2025/FinKN-aarsrapport-2025.pdf', L('Finansklagenemnda: Årsrapport 2025','Financial Services Complaints Board: Annual report 2025')],
+    ['https://www.domstol.no/en/supremecourt/rulings/rulings-2022/supreme-court-civil-cases/HR-2022-1752-A/', L('Høyesterett: HR-2022-1752-A','Supreme Court of Norway: HR-2022-1752-A')],
+    ['https://europalov.no/node/31858', L('EØS-notat: PSR-forordningen','EEA memo: the PSR regulation')],
+    ['https://www.lovguiden.dk/en/det-offentlige/eur-lex-kommissionsforslag/2026-11-03-eu-payment-services-regulation-banks-must-prevent-fraud-and-pay-compensation', L('Status for PSR, november 2026','PSR status, November 2026')],
+    ['https://www.finanstilsynet.no/nyhetsarkiv/nyheter/2026/nye-regler-om-informasjonsdeling-i-arbeidet-med-a-bekjempe-okonomisk-kriminalitet/', L('Finanstilsynet: Nye regler om informasjonsdeling','Finanstilsynet: New rules on information sharing')]
+  ];
+  return `<div class="stack-l">
+  <div class="stack"><span class="eyebrow">${S('grpProposal')}</span><h1>${S('om')}</h1>
+  <p class="lede">${L('Forslaget er laget i fire steg, fra workshop til demo. Demoen viser hvordan løsningen kan fungere i Morild Bank. Den er ikke et ferdig produkt.','The proposal was made in four steps, from workshop to demo. The demo shows how the solution could work at Morild Bank. It is not a finished product.')}</p></div>
+  <div class="steps">
+    <div class="step on"><span class="eyebrow">1 · Workshop</span><h3>${L('Halvdags workshop','Half-day workshop')}</h3><p>${L('Svindelteam, kundeservice, compliance og IT gikk gjennom dagens saksflyt, med eksempler på reelle saker.','The fraud team, customer service, compliance and IT walked through the current workflow, with examples of real cases.')}</p></div>
+    <div class="step on"><span class="eyebrow">2 · ${L('Behov','Needs')}</span><h3>${L('Sju behov','Seven needs')}</h3><p>${L('Behovene ble prioritert sammen med banken og bekreftet i oppsummeringen etter workshopen.','The needs were prioritised with the bank and confirmed in the summary after the workshop.')}</p></div>
+    <div class="step on"><span class="eyebrow">3 · ${S('grpProposal')}</span><h3>${L("Koblet til Kystlys' moduler",'Linked to Kystlys modules')}</h3><p>${L('Hvert behov ble koblet til eksisterende moduler fra Kystlys, og vi identifiserte det som mangler: saksflyten for svindelkrav.','Each need was linked to existing Kystlys modules, and we identified what is missing: the workflow for fraud claims.')}</p></div>
+    <div class="step on"><span class="eyebrow">4 · ${S('grpDemo')}</span><h3>${L('Klikkbar demo','Clickable demo')}</h3><p>${L('Demoen bruker oppdiktede saker, slik det kan se ut etter noen måneders bruk.','The demo uses made-up cases, as it could look after a few months of use.')}</p></div>
+  </div>
+  <section class="grid2">
+    <div class="panel stack"><h3>${L('Regelverket demoen bygger på','The rules the demo is based on')}</h3>
+      <p style="font-size:14px">${L('<b>Gjeldende rett.</b> Finansavtaleloven (2020) om uautoriserte betalinger og egenandel, Høyesteretts dommer HR-2022-1752-A og HR-2024-990-A, og Finansklagenemndas praksis (blant annet 2024-309 og 2026-5).','<b>Current law.</b> The Norwegian Financial Contracts Act (2020) on unauthorised payments and excess, Supreme Court rulings HR-2022-1752-A and HR-2024-990-A, and the Financial Services Complaints Board’s practice (including 2024-309 and 2026-5).')}</p>
+      <p style="font-size:14px">${L('<b>PSR.</b> EUs nye forordning om betalingstjenester. Politisk enighet 27.11.2025, Rådets førstebehandlingsposisjon 28.10.2026. Europaparlamentets andrebehandling gjenstår. Reglene gjelder 21 måneder etter ikrafttredelse. I Norge må forordningen innlemmes i EØS-avtalen, så tidspunktet er usikkert.','<b>PSR.</b> The EU’s new Payment Services Regulation. Political agreement on 27 Nov 2025, Council first-reading position on 28 Oct 2026. The European Parliament’s second reading remains. The rules apply 21 months after entry into force. In Norway the regulation must be incorporated into the EEA Agreement, so the timing is uncertain.')}</p>
+      <p style="font-size:14px">${L('<b>Begrensning.</b> PSR-refusjonen gjelder bare når svindleren utgir seg for å være kundens egen bank via kanaler som tilskrives banken. Falsk politi og investeringssvindel er ikke omfattet.','<b>Limitation.</b> The PSR refund only applies when the fraudster poses as the customer’s own bank via channels attributed to the bank. Fake police and investment fraud are not covered.')}</p>
+    </div>
+    <div class="panel stack"><h3>${L('Kilder','Sources')}</h3><ul class="sources" style="margin:0; padding-left:18px">
+      ${src.map(([u,t]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join('')}</ul></div>
+  </section>
+  <div class="stack" style="gap:6px; font-size:14px; color:var(--muted); border-top:1px solid var(--line); padding-top:16px">
+    <p>${L('Uavhengig konseptdemo laget av Stein Wulvik.','Independent concept demo made by Stein Wulvik.')}</p>
+    <p>${L('Morild Bank, Kystlys Software og ScamCase Enterprise er fiktive. Demoen er ikke juridisk rådgivning.','Morild Bank, Kystlys Software and ScamCase Enterprise are fictional. The demo is not legal advice.')}</p>
+  </div>
+  </div>`;
+}
+
+// ---------- Visning: Saksoversikt ----------
+let FILTER = { q:'', st:'open', reg:'alle' };
+function vSaker(){
+  const open = CASES.filter(c => OPEN.has(c.status));
+  const tri = open.map(c => [c, triage(c)]);
+  const risk = tri.filter(([c,t]) => { const d = deadlineInfo(c,t); return d.left !== null && d.left <= 1; }).length;
+  const psrNow = CASES.filter(c => c.utfortAv==='kunde' && c.avsender==='bank' && c.bankKanal && OPEN.has(c.status)).length;
+  return `<div class="stack">
+    ${sampleBanner()}
+    <div class="panel-h"><h1 style="font-size:28px">${S('saker')}</h1></div>
+    <div class="kpis">
+      <div class="kpi"><span class="v">${open.length}</span><span class="l">${L('Åpne krav','Open claims')}</span></div>
+      <div class="kpi ${risk?'alert':''}"><span class="v">${risk}</span><span class="l">${L('Frist i dag eller i morgen','Due today or tomorrow')}</span></div>
+      <div class="kpi"><span class="v">${nok(open.reduce((s,c)=>s+c.belop,0))}</span><span class="l">${L('Omtvistet beløp, åpne krav','Disputed amount, open claims')}</span></div>
+      <div class="kpi"><span class="v">${psrNow}</span><span class="l">${L('Åpne krav som PSR vil omfatte','Open claims PSR will cover')}</span></div>
+    </div>
+    ${MODE==='psr' ? `<div class="note ok"><b>${S('modePsr')}</b><span>${L('Saker med bank-imitasjon via bankens kanal får refusjonsrett og 15 virkedagers frist. Bytt tilbake til «Gjeldende rett» øverst for å sammenligne.','Cases with bank impersonation via the bank’s channel get a refund right and a 15-business-day deadline. Switch back to "Current law" at the top to compare.')}</span></div>` : ''}
+    <div class="filters">
+      <input type="text" id="fq" placeholder="${L('Søk på kunde eller saksnummer','Search by customer or case number')}" value="${esc(FILTER.q)}" style="max-width:260px" aria-label="${L('Søk','Search')}">
+      <select id="fst" style="max-width:190px" aria-label="Status"><option value="open">${L('Åpne krav','Open claims')}</option><option value="closed">${L('Avsluttede','Closed')}</option><option value="all">${L('Alle','All')}</option></select>
+      <select id="freg" style="max-width:240px" aria-label="${S('regime')}"><option value="alle">${L('Alle regelverk','All rules')}</option>${['uaut','psr','autbank','annen'].map(k => `<option value="${k}">${L(...SHORT[k])}</option>`).join('')}</select>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>${L('Sak','Case')}</th><th>${L('Kunde','Customer')}</th><th style="text-align:right">${L('Beløp','Amount')}</th><th>${L('Påstått avsender','Claimed sender')}</th><th>${S('regime')}</th><th>${L('Frist','Deadline')}</th><th>Status</th></tr></thead>
+      <tbody id="caseRows"></tbody></table></div>
+    <p class="muted" style="font-size:12.5px" id="rowInfo"></p>
+  </div>`;
+}
+function caseRows(){
+  let list = CASES.slice();
+  if(FILTER.st==='open') list = list.filter(c => OPEN.has(c.status)); else if(FILTER.st==='closed') list = list.filter(c => !OPEN.has(c.status));
+  const q = FILTER.q.trim().toLowerCase(); if(q) list = list.filter(c => c.kunde.toLowerCase().includes(q) || c.id.toLowerCase().includes(q));
+  let rows = list.map(c => { const t = triage(c); return {c, t, d:deadlineInfo(c,t)}; });
+  if(FILTER.reg!=='alle') rows = rows.filter(r => r.t.regime === FILTER.reg);
+  rows.sort((a,b) => FILTER.st==='open' ? ((a.d.left ?? 999) - (b.d.left ?? 999)) : (b.c.meldt - a.c.meldt));
+  const shown = rows.slice(0, 60);
+  $('#caseRows').innerHTML = shown.map(({c,t,d}) => `<tr class="click" data-id="${c.id}" tabindex="0">
+    <td><span class="mono">${c.id}</span>${c.showcase?' <span class="pill acc">Demo</span>':''}<div class="muted" style="font-size:12px">${L('Meldt','Reported')} ${fmtDs(c.meldt)}</div></td>
+    <td>${esc(c.kunde)}<div class="muted" style="font-size:12px">${ka(c.kanal)}</div></td>
+    <td class="num" style="text-align:right; white-space:nowrap">${nok(c.belop)}</td>
+    <td>${av(c.avsender)}</td>
+    <td><span class="pill ${t.regime==='psr'?'ok':t.regime==='uaut'?'info':t.regime==='autbank'?'warn':''}">${t.short}</span></td>
+    <td class="deadline ${d.cls}">${d.txt}</td>
+    <td><span class="pill ${STATUS[c.status].c}"><span class="dot"></span>${st(c.status)}</span></td></tr>`).join('') || `<tr><td colspan="7" class="muted">${L('Ingen saker matcher filteret.','No cases match the filter.')}</td></tr>`;
+  $('#rowInfo').textContent = rows.length > shown.length ? L(`Viser ${shown.length} av ${rows.length} saker.`,`Showing ${shown.length} of ${rows.length} cases.`) : L(`${rows.length} saker.`,`${rows.length} cases.`);
+  $$('#caseRows tr.click').forEach(tr => { const go = () => location.hash = 'sak-' + tr.dataset.id; tr.addEventListener('click', go); tr.addEventListener('keydown', e => { if(e.key==='Enter') go(); }); });
+}
+AFTER.saker = (h) => {
+  if(h.startsWith('sak-')) return AFTER.sak(h.slice(4));
+  $('#fst').value = FILTER.st; $('#freg').value = FILTER.reg; caseRows();
+  $('#fq').addEventListener('input', e => { FILTER.q = e.target.value; caseRows(); });
+  $('#fst').addEventListener('change', e => { FILTER.st = e.target.value; caseRows(); });
+  $('#freg').addEventListener('change', e => { FILTER.reg = e.target.value; caseRows(); });
+};
+// ---------- Visning: Sak ----------
+function evidence(c){
+  const i = c.ind; const E = [];
+  const src = { kunde:L('Kunde','Customer'), sov:L('Svindelovervåkning','Fraud monitoring'), nk:L('Navnekontroll','Payee name check'), nb:L('Nettbank','Online banking'), tel:L('Teleoperatør','Telecom operator') };
+  E.push(c.politi ? ['ok','✓',L('Politianmeldelse mottatt','Police report received'), L(`Registrert ${fmtD(c.politi)}`,`Registered ${fmtD(c.politi)}`), src.kunde] : ['warn','!',L('Politianmeldelse mangler','Police report missing'), L('Kunden er bedt om å levere anmeldelse','The customer has been asked to file a report'), src.kunde]);
+  E.push(i.overvaking ? ['warn','!',L('Svindelovervåkningen ga varsel før betalingen','Fraud monitoring raised an alert before the payment'), L('Risikoscore 0,87. Betalingen ble likevel gjennomført.','Risk score 0.87. The payment still went through.'), src.sov] : ['ok','✓',L('Ingen varsel fra svindelovervåkningen','No alert from fraud monitoring'), L('Betalingen lå innenfor kundens normale mønster','The payment was within the customer’s normal pattern'), src.sov]);
+  E.push(i.vop ? ['warn','!',L('Navnet stemte ikke med mottakerkontoen','The name did not match the payee account'), L('Kunden fikk varsel om avvik før godkjenning','The customer was warned of the mismatch before approving'), src.nk] : ['ok','✓',L('Navnet stemte med mottakerkontoen','The name matched the payee account'), L('Ingen varsel til kunden','No warning to the customer'), src.nk]);
+  E.push(i.nyEnhet ? ['bad','×',L('Betaling fra ny og ukjent enhet','Payment from a new, unknown device'), L('Første innlogging fra denne enheten, kort tid før betalingen','First login from this device, shortly before the payment'), src.nb] : ['ok','✓',L('Betaling fra kundens kjente enhet','Payment from the customer’s known device'), L('Kundens vanlige mobil','The customer’s usual phone'), src.nb]);
+  E.push(i.spoof ? ['bad','×',L('Teleoperatør bekrefter falskt avsendernummer','Telecom operator confirms spoofed caller number'), L('Anropet viste Morild Banks nummer 915 10 000','The call displayed Morild Bank’s number 915 10 000'), src.tel] : ['na','–',L('Ingen bekreftelse fra teleoperatør','No confirmation from telecom operator'), c.kanal==='telefon' ? L('Forespørsel kan sendes','A request can be sent') : L('Ikke relevant for kanalen','Not relevant for the channel'), src.tel]);
+  const tk = { sendt:['warn','…',L('Tilbakekall sendt til mottakerbank','Recall sent to receiving bank'), L(`${c.mottaker}. Venter på svar.`,`${c.mottaker}. Awaiting reply.`)],
+               delvis:['ok','✓',L('Delvis tilbakeført fra mottakerbank','Partly recovered from receiving bank'), L(`${nok(c.tilbakefort)} fra ${c.mottaker}`,`${nok(c.tilbakefort)} from ${c.mottaker}`)],
+               avvist:['bad','×',L('Mottakerbank avviste tilbakekall','Receiving bank rejected recall'), L(`${c.mottaker}. Midlene var tatt ut.`,`${c.mottaker}. The funds had been withdrawn.`)],
+               ikke:['na','–',L('Tilbakekall ikke sendt','Recall not sent'), ''] }[c.tilbakekall] || ['na','–',L('Tilbakekall ikke sendt','Recall not sent'),''];
+  E.push([...tk, 'Kystlys Case Desk']);
+  return E;
+}
+function letter(c, s, t){
+  const first = c.kunde.split(' ')[0];
+  if(LANG==='en'){
+    const hi = `Dear ${first},\n\nWe refer to your claim of ${fmtD(c.meldt)} regarding a payment of ${nok(c.belop)} to ${c.mottaker} (case ${c.id}).\n\n`;
+    const app = `\n\nIf you disagree with the decision, you can complain to Morild Bank. You can also bring the case before the Norwegian Financial Services Complaints Board (finkn.no).\n\nKind regards\nThe Fraud Team, Morild Bank`;
+    const sig = `\n\nKind regards\nThe Fraud Team, Morild Bank`;
+    if(s.k==='refundert') return hi + `We have concluded that you are entitled to a refund. ${nok(s.amount)} will be paid into your account${s.amount < c.belop ? `. The excess is ${nok(c.belop - s.amount)}` : ''}.` + (t.regime==='psr' ? ' The fraudster posed as Morild Bank via a channel belonging to the bank, and you have reported the matter to the bank and the police.' : '') + sig;
+    if(s.k==='delvis') return hi + `We have concluded that you will be refunded ${nok(s.amount)}. ${t.regime==='uaut' ? 'You gave your BankID code and password after contact from the fraudster. This is considered grossly negligent, so the excess is NOK 12,000.' : 'The bank should have caught the payment based on signals we had. The amount is reduced because you also had reason to stop the payment.'}` + app;
+    if(s.k==='avslatt') return hi + `Unfortunately we have concluded that the bank cannot cover the loss. ${t.regime==='psr' ? 'We have emphasised that you overrode a specific warning from the bank and made several payments. You have been given the opportunity to explain.' : 'You approved the payment yourself, and we found no signals suggesting the bank should have stopped it.'} We are continuing our efforts to recover the money from the receiving bank.` + app;
+    if(s.k==='venter-politi') return hi + `To process the claim we need a copy of the police report. You can report it at politiet.no. The processing deadline starts when we have received the report.` + sig;
+    return hi + `We need more information to process the claim. Please briefly describe how the fraudster contacted you and what you were asked to do.` + sig;
+  }
+  const hils = `Hei ${first},\n\nVi viser til kravet ditt av ${fmtD(c.meldt)} om betaling på ${nok(c.belop)} til ${c.mottaker} (sak ${c.id}).\n\n`;
+  const klage = `\n\nEr du uenig i avgjørelsen, kan du klage til Morild Bank. Du kan også bringe saken inn for Finansklagenemnda (finkn.no).\n\nVennlig hilsen\nSvindelteamet, Morild Bank`;
+  const sig = `\n\nVennlig hilsen\nSvindelteamet, Morild Bank`;
+  if(s.k==='refundert') return hils + `Vi har kommet til at du har krav på tilbakeføring. ${nok(s.amount)} settes inn på kontoen din${s.amount < c.belop ? `. Egenandelen er ${nok(c.belop - s.amount)}` : ''}.` + (t.regime==='psr' ? ' Svindleren utga seg for å være Morild Bank via en kanal som tilhører banken, og du har meldt saken til banken og politiet.' : '') + sig;
+  if(s.k==='delvis') return hils + `Vi har kommet til at du får tilbakeført ${nok(s.amount)}. ${t.regime==='uaut' ? 'Du har oppgitt BankID-kode og passord etter henvendelse fra svindleren. Det regnes som grovt uaktsomt, og egenandelen er derfor 12 000 kr.' : 'Banken burde ha fanget opp betalingen ut fra signaler vi hadde. Beløpet er redusert fordi også du hadde grunn til å stoppe betalingen.'}` + klage;
+  if(s.k==='avslatt') return hils + `Vi har dessverre kommet til at banken ikke kan dekke tapet. ${t.regime==='psr' ? 'Vi har lagt vekt på at du overstyrte en konkret advarsel fra banken og gjennomførte flere betalinger. Du har fått anledning til å forklare deg.' : 'Du godkjente betalingen selv, og vi fant ikke signaler som tilsa at banken burde ha stanset den.'} Vi fortsetter arbeidet med å få pengene tilbake fra mottakerbanken.` + klage;
+  if(s.k==='venter-politi') return hils + `For å behandle kravet trenger vi en kopi av politianmeldelsen. Du kan anmelde på politiet.no. Fristen for behandling starter når vi har mottatt anmeldelsen.` + sig;
+  return hils + `Vi trenger mer informasjon for å behandle kravet. Beskriv kort hvordan svindleren kontaktet deg, og hva du ble bedt om å gjøre.` + sig;
+}
+const NEGL = { koder:['Kunden delte BankID-kode eller passord','The customer shared a BankID code or password'], advarsel:['Kunden overstyrte en konkret advarsel fra banken','The customer overrode a specific warning from the bank'], gjentatt:['Flere betalinger etter at kunden burde fått mistanke','Several payments after the customer should have become suspicious'], forsett:['Indikasjoner på at kunden selv medvirket','Indications that the customer took part'] };
+function vSak(c){
+  const t = triage(c), s = suggest(c, t), d = deadlineInfo(c, t);
+  const start = t.regime==='psr' ? (c.politi ? (c.politi > c.meldt ? c.politi : c.meldt) : null) : c.meldt;
+  const total = t.frist && start ? Math.max(1, bizBetween(start, t.frist)) : 1;
+  const used = t.frist && start ? Math.min(total, Math.max(0, bizBetween(start, TODAY))) : 0;
+  const pct = OPEN.has(c.status) ? Math.round(used/total*100) : 100;
+  const ringC = d.cls==='bad' ? 'var(--bad)' : d.cls==='warn' ? 'var(--warn)' : 'var(--accent)';
+  const decided = !OPEN.has(c.status);
+  const utf = c.utfortAv==='kunde' ? L('Kunden selv','The customer') : c.utfortAv==='svindler' ? L('Svindleren','The fraudster') : L('Uavklart','Unresolved');
+  return `<div class="stack">
+    ${sampleBanner()}
+    <div class="panel-h"><div class="stack" style="gap:4px"><a href="#saker" style="font-size:13px">← ${S('saker')}</a><h1 style="font-size:28px">${esc(c.kunde)} <span class="mono muted" style="font-size:15px; font-weight:400">${c.id}</span></h1></div>
+      <span class="pill ${STATUS[c.status].c}" style="font-size:13px"><span class="dot"></span>${st(c.status)}</span></div>
+    <div class="split">
+      <div class="stack">
+        <div class="panel"><div class="kpis">
+          <div><div class="eyebrow">${L('Beløp','Amount')}</div><b class="num" style="font-size:18px">${nok(c.belop)}</b><div class="muted" style="font-size:12px">${c.antallBet} ${plural(c.antallBet,'betaling','betalinger','payment','payments')}</div></div>
+          <div><div class="eyebrow">${L('Mottaker','Payee')}</div><b>${esc(c.mottaker)}</b></div>
+          <div><div class="eyebrow">${L('Påstått avsender','Claimed sender')}</div><b>${av(c.avsender)}</b><div class="muted" style="font-size:12px">${ka(c.kanal)}${c.avsender==='bank' ? (c.bankKanal?L(' · bankens kanal',' · bank’s channel'):L(' · ikke bankens kanal',' · not bank’s channel')):''}</div></div>
+          <div><div class="eyebrow">${L('Utført av','Made by')}</div><b>${utf}</b><div class="muted" style="font-size:12px">${L('Meldt','Reported')} ${fmtD(c.meldt)}</div></div>
+        </div></div>
+        ${tx(c.forklaring) ? `<div class="panel"><h3>${L('Kundens forklaring','Customer’s explanation')}</h3><p style="font-size:14px; max-width:70ch">${esc(tx(c.forklaring))}</p></div>` : ''}
+        <div class="panel"><div class="panel-h" style="margin-bottom:4px"><h3>${L('Bevis fra bankens systemer','Evidence from the bank’s systems')}</h3><span class="muted" style="font-size:12.5px">${L('Hentet automatisk','Collected automatically')}</span></div>
+          ${evidence(c).map(([k,ic,ti,de,src]) => `<div class="ev"><span class="ico ${k}">${ic}</span><div><b style="font-weight:600">${ti}</b><div class="muted" style="font-size:13px">${esc(de)}</div></div><span class="src">${src}</span></div>`).join('')}
+        </div>
+        <div class="panel"><div class="panel-h" style="margin-bottom:4px"><h3>${L('Kundens aktsomhet','Customer’s diligence')}</h3><span class="muted" style="font-size:12.5px">${L('Endringer oppdaterer forslaget','Changes update the suggestion')}</span></div>
+          ${Object.keys(NEGL).map(k => `<label class="chk"><input type="checkbox" data-ind="${k}" ${c.ind[k]?'checked':''} ${decided?'disabled':''}><span>${L(...NEGL[k])}</span></label>`).join('')}
+        </div>
+        <div class="panel stack"><div class="panel-h" style="margin-bottom:0"><h3>${decided?L('Sendt brev','Letter sent'):L('Brevutkast til kunden','Draft letter to the customer')}</h3><button class="btn sm" type="button" id="copyLetter">${L('Kopier tekst','Copy text')}</button></div>
+          <textarea id="letter" aria-label="${L('Brevutkast','Draft letter')}" style="min-height:220px">${esc(letter(c, decided ? {k:c.status==='finkn'?'avslatt':c.status, amount:c.refundert} : s, t))}</textarea></div>
+        <div class="panel"><h3>${L('Hendelseslogg','Event log')}</h3><ul class="log">${c.logg.slice().reverse().map(l => `<li><time>${fmtD(l.d)}</time><span>${esc(logText(l.t))}</span></li>`).join('')}</ul></div>
+      </div>
+      <div class="stack sticky">
+        <div class="triage"><div class="head ${t.cls}"><span class="eyebrow">${S('regime')} · ${MODE==='psr'?S('modePsr'):S('modeNow')}</span><b>${t.title}</b></div>
+          <ol>${t.steps.map(x => `<li>${x}</li>`).join('')}</ol><p class="basis">${t.basis}</p></div>
+        <div class="panel"><div class="clock"><div class="ring" style="--p:${pct}; --c:${ringC}"><i>${d.left!==null && d.left!==undefined ? Math.max(d.left,0) : '–'}</i></div>
+          <div><div class="eyebrow">${t.fristLabel || L('Frist','Deadline')}</div><b class="deadline ${d.cls}">${OPEN.has(c.status) ? (t.frist ? fmtD(t.frist) : L('Ikke startet','Not started')) : d.txt}</b><div class="muted" style="font-size:12.5px">${OPEN.has(c.status) ? `${d.txt}. ${t.fristNote}` : ''}</div></div></div></div>
+        ${decided ? `<div class="note ok"><b>${L('Avgjort','Decided')}</b><span>${st(c.status)}${c.refundert?`: ${nok(c.refundert)}`:''}, ${fmtD(c.avgjort)}.</span></div>` : `
+        <div class="suggest"><span class="eyebrow" style="color:var(--accent)">${L('Forslag til beslutning','Suggested decision')}</span><b>${s.title}</b>${s.why.map(w => `<span style="font-size:13.5px">${w}</span>`).join('')}</div>
+        <div class="panel stack"><h3>${L('Beslutning','Decision')}</h3>
+          <button class="btn primary" type="button" data-dec="accept">${L('Godta forslaget','Accept suggestion')}</button>
+          <div class="row"><button class="btn sm" type="button" data-dec="refundert">${L('Refunder','Refund')}</button><button class="btn sm" type="button" data-dec="delvis">${t.regime==='uaut' ? L('Med egenandel','Less excess') : L('Delvis refusjon','Partial refund')}</button><button class="btn sm danger" type="button" data-dec="avslatt">${L('Avslå','Reject')}</button><button class="btn sm" type="button" data-dec="venter-kunde">${L('Be om info','Request info')}</button></div>
+          ${t.regime==='uaut' ? '' : `<label class="f">${L('Beløp ved delvis refusjon (kr)','Amount for partial refund (NOK)')}<input type="number" id="partAmt" min="1" max="${c.belop}" placeholder="${L('Fastsett beløp','Set amount')}"></label>`}
+          <p class="muted" style="font-size:12.5px">${L('Saksbehandler tar beslutningen. Forslaget er beslutningsstøtte og logges sammen med valget.','The case handler makes the decision. The suggestion is decision support and is logged with the choice.')}</p></div>`}
+      </div>
+    </div></div>`;
+}
+AFTER.sak = (id) => {
+  const c = byId(id); if(!c) return;
+  $$('[data-ind]').forEach(cb => cb.addEventListener('change', () => { const k = cb.dataset.ind;
+    c.ind[k] = cb.checked; c.logg.push({d:TODAY, t:Lg(`Aktsomhet endret: ${NEGL[k][0]} = ${cb.checked?'ja':'nei'}`, `Diligence changed: ${NEGL[k][1]} = ${cb.checked?'yes':'no'}`)}); if(c.status==='ny') c.status='vurdering'; saveCase(c); render(); }));
+  $('#copyLetter')?.addEventListener('click', () => { const ta = $('#letter'); const fail = () => { ta.select(); toast(L('Merk teksten og kopier manuelt','Select the text and copy manually')); };
+    try{ navigator.clipboard ? navigator.clipboard.writeText(ta.value).then(() => toast(L('Brevteksten er kopiert','The letter text has been copied')), fail) : fail(); }catch(e){ fail(); } });
+  $$('[data-dec]').forEach(b => b.addEventListener('click', () => {
+    const t = triage(c), s = suggest(c, t); let k = b.dataset.dec, amt;
+    if(k==='accept'){ k = s.k; amt = s.amount; }
+    else if(k==='refundert') amt = t.regime==='uaut' ? c.belop-450 : c.belop;
+    else if(k==='delvis'){
+      if(t.regime==='uaut') amt = Math.max(0,c.belop-12000);
+      else { amt = Number($('#partAmt')?.value); if(!(amt>0 && amt<=c.belop)){ $('#partAmt')?.focus(); return toast(L('Fyll inn beløp for delvis refusjon','Enter the amount for the partial refund')); } }
+    }
+    else amt = 0;
+    if(k==='vurdering'){ c.status='vurdering'; c.logg.push({d:TODAY, t:Lg('Forslag godtatt: fortsett vurdering','Suggestion accepted: continue review')}); saveCase(c); render(); toast(L('Saken er satt til vurdering','The case is set to review')); return; }
+    c.status = k; c.refundert = ['refundert','delvis'].includes(k) ? amt : 0;
+    if(!OPEN.has(k)){ c.avgjort = TODAY; c.beslutning = k; }
+    c.logg.push({d:TODAY, t:{dec:k, amt:c.refundert, reg:t.shortObj, accepted:b.dataset.dec==='accept'}});
+    saveCase(c); render(); toast(OPEN.has(k) ? `Status: ${st(k)}` : L('Beslutningen er lagret, og brevet er klart','The decision is saved, and the letter is ready'));
+  }));
+};
+
+// ---------- Visning: Registrer krav ----------
+const DRAFT_DEF = { kunde:'Marit Eide', belop:46800, betalt:iso(TODAY), kanal:'telefon', avsender:'bank', bankKanal:'ja', utfortAv:'kunde', politi:'ja', koder:false, advarsel:false, gjentatt:false, forklaring:null };
+const DRAFT_TXT = Lg('Kunden ble ringt opp fra et nummer som viste Morild Banks kundesenter. Innringer sa at det var registrert mistenkelige trekk og ba henne flytte sparepengene til en ny konto. Hun godkjente overføringen i mobilbanken.',
+  'The customer was called from a number displayed as Morild Bank’s customer centre. The caller said suspicious transactions had been detected and asked her to move her savings to a new account. She approved the transfer in mobile banking.');
+let DRAFT = store.get('cg_draft', {...DRAFT_DEF});
+const draftText = () => DRAFT.forklaring ?? tx(DRAFT_TXT);
+function radios(name, opts){ return `<div class="choice">${opts.map(([v,l]) => `<label><input type="radio" name="${name}" id="${name}_${v}" value="${v}" ${DRAFT[name]===v?'checked':''}>${l}</label>`).join('')}</div>`; }
+const optsOf = map => Object.keys(map).map(k => [k, L(...map[k])]);
+function vNytt(){
+  return `<div class="stack">
+    <div class="panel-h"><div class="stack" style="gap:4px"><h1 style="font-size:28px">${S('nytt-krav')}</h1><p class="muted">${L('Skjemaet er fylt ut med et eksempel. Endre svarene og se hvordan regelverk og frist endres.','The form is filled in with an example. Change the answers and see how rules and deadline change.')}</p></div>
+      <button class="btn sm" type="button" id="draftReset">${L('Tilbakestill eksempel','Reset example')}</button></div>
+    <form id="claimForm" class="split" novalidate>
+      <div class="stack">
+        <div class="panel stack"><h3>${L('Kunde og betaling','Customer and payment')}</h3>
+          <div class="grid2"><label class="f">${L('Kunde','Customer')}<input type="text" id="kunde" name="kunde" value="${esc(DRAFT.kunde)}" required></label>
+          <label class="f">${L('Beløp (kr)','Amount (NOK)')}<input type="number" id="belop" name="belop" min="1" value="${DRAFT.belop}" required></label></div>
+          <label class="f" style="max-width:260px">${L('Betalingsdato','Payment date')}<input type="date" id="betalt" name="betalt" value="${DRAFT.betalt}"></label>
+        </div>
+        <div class="panel stack"><h3>${L('Hvordan ble kunden kontaktet?','How was the customer contacted?')}</h3>
+          <label class="f">${L('Kanal','Channel')}</label>${radios('kanal', optsOf(KANAL))}
+          <label class="f">${L('Hvem utga svindleren seg for å være?','Who did the fraudster pose as?')}</label>${radios('avsender', optsOf(AVSENDER))}
+          <div id="bankKanalWrap" class="stack" ${DRAFT.avsender==='bank'?'':'hidden'}><label class="f">${L('Kom henvendelsen via en kanal som tilhører banken?','Did the contact come via a channel belonging to the bank?')}<span class="h">${L('For eksempel bankens telefonnummer i displayet, SMS i samme tråd som bankens meldinger eller e-post fra bankens domene.','For example the bank’s phone number on the display, a text in the same thread as the bank’s messages, or an email from the bank’s domain.')}</span></label>${radios('bankKanal', [['ja',L('Ja','Yes')],['nei',L('Nei','No')],['usikker',L('Usikkert','Unsure')]])}</div>
+        </div>
+        <div class="panel stack"><h3>${L('Hvem utførte betalingen?','Who made the payment?')}</h3>
+          ${radios('utfortAv', [['kunde',L('Kunden godkjente betalingen selv','The customer approved the payment')],['svindler',L('Svindleren brukte kundens innloggingsdata','The fraudster used the customer’s login details')],['usikker',L('Usikkert','Unsure')]])}
+          <label class="f">${L('Har kunden anmeldt saken til politiet?','Has the customer reported the matter to the police?')}</label>${radios('politi', [['ja',L('Ja','Yes')],['nei',L('Ikke ennå','Not yet')]])}
+        </div>
+        <div class="panel"><h3>${L('Kundens aktsomhet','Customer’s diligence')}</h3>
+          ${['koder','advarsel','gjentatt'].map(k => `<label class="chk"><input type="checkbox" id="${k}" ${DRAFT[k]?'checked':''}><span>${L(...NEGL[k])}</span></label>`).join('')}
+        </div>
+        <div class="panel stack"><label class="f">${L('Kundens forklaring','Customer’s explanation')}<textarea id="forklaring" name="forklaring">${esc(draftText())}</textarea></label></div>
+      </div>
+      <div class="stack sticky" id="livePanel"></div>
+    </form></div>`;
+}
+function draftCase(){
+  const bk = DRAFT.bankKanal === 'ja'; const meldt = isBiz(TODAY) ? TODAY : addBiz(TODAY, 1);
+  return makeCase({ id:'(ny)', kunde:DRAFT.kunde || L('Ny kunde','New customer'), belop:Number(DRAFT.belop)||0, betalt:parseIso(DRAFT.betalt), meldt, politi: DRAFT.politi==='ja' ? meldt : null, kanal:DRAFT.kanal, avsender:DRAFT.avsender,
+    bankKanal: DRAFT.avsender==='bank' && bk, utfortAv: DRAFT.utfortAv==='usikker' ? 'usikker' : DRAFT.utfortAv, mottaker:L('Ukjent mottakerbank','Unknown receiving bank'),
+    ind:{koder:DRAFT.koder, advarsel:DRAFT.advarsel, gjentatt:DRAFT.gjentatt, forsett:false, overvaking:false, vop:false, nyEnhet:DRAFT.utfortAv==='svindler', spoof:false}, forklaring:draftText() });
+}
+function livePanel(){
+  const c = draftCase(), t = triage(c), s = suggest(c, t);
+  const other = triage(c, MODE==='psr'?'now':'psr');
+  const diff = other.regime !== t.regime;
+  $('#livePanel').innerHTML = `
+    <div class="triage"><div class="head ${t.cls}"><span class="eyebrow">${L('Foreslått regelverk','Suggested rules')} · ${MODE==='psr'?S('modePsr'):S('modeNow')}</span><b>${t.title}</b></div><ol>${t.steps.map(x=>`<li>${x}</li>`).join('')}</ol><p class="basis">${t.basis}</p></div>
+    <div class="panel"><div class="eyebrow">${t.fristLabel || L('Frist','Deadline')}</div><b class="deadline" style="font-size:17px">${t.frist ? fmtD(t.frist) : L('Starter når vilkårene er på plass','Starts when the conditions are met')}</b><div class="muted" style="font-size:12.5px">${t.fristNote}</div></div>
+    ${diff ? `<div class="note ${MODE==='psr'?'':'ok'}"><b>${MODE==='psr'?L('I dag','Today'):L('Med PSR','With PSR')}</b><span>${other.title}${other.frist?L(`, frist ${fmtD(other.frist)}`,`, deadline ${fmtD(other.frist)}`):''}.</span></div>` : ''}
+    <div class="suggest"><span class="eyebrow" style="color:var(--accent)">${L('Forslag til beslutning','Suggested decision')}</span><b>${s.title}</b>${s.why.map(w=>`<span style="font-size:13.5px">${w}</span>`).join('')}</div>
+    <button class="btn primary" type="submit" ${c.belop>0 && DRAFT.kunde ? '' : 'disabled'}>${L('Opprett sak','Create case')}</button>
+    <p class="muted" style="font-size:12.5px">${L('Bevis fra svindelovervåkning, navnekontroll og nettbank hentes når saken opprettes.','Evidence from fraud monitoring, payee name check and online banking is collected when the case is created.')}</p>`;
+}
+AFTER['nytt-krav'] = () => {
+  livePanel();
+  const f = $('#claimForm');
+  f.addEventListener('input', e => {
+    const el = e.target;
+    if(el.type==='radio') DRAFT[el.name] = el.value; else if(el.type==='checkbox') DRAFT[el.id] = el.checked; else DRAFT[el.id] = el.type==='number' ? Number(el.value) : el.value;
+    $('#bankKanalWrap').hidden = DRAFT.avsender !== 'bank';
+    store.set('cg_draft', DRAFT); livePanel();
+  });
+  f.addEventListener('submit', e => {
+    e.preventDefault(); const c = draftCase(); if(!(c.belop>0)) return toast(L('Fyll inn beløp','Enter an amount'));
+    const nr = Math.max(...CASES.map(x => Number(x.id.split('-')[2]) || 0)) + 1;
+    c.id = `MB-${TODAY.getFullYear()}-${String(nr).padStart(4,'0')}`; c.added = true; c.status = c.politi || triage(c).regime!=='psr' ? 'ny' : 'venter-politi';
+    const r = rng(c.belop); c.ind.overvaking = r()<.5; c.ind.vop = r()<.4; c.ind.spoof = c.avsender==='bank' && c.kanal==='telefon' && c.bankKanal; c.mottaker = MOTTAK[Math.floor(r()*MOTTAK.length)]; c.tilbakekall = 'sendt';
+    c.logg = [{d:TODAY, t:Lg('Krav registrert i ScamCase Enterprise','Claim registered in ScamCase Enterprise')},{d:TODAY, t:Lg('Bevis hentet fra svindelovervåkning, navnekontroll og nettbank','Evidence collected from fraud monitoring, payee name check and online banking')},{d:TODAY, t:L_REG.recall}];
+    CASES.push(c); saveCase(c); DRAFT = {...DRAFT_DEF}; store.del('cg_draft');
+    toast(L(`Sak ${c.id} er opprettet`,`Case ${c.id} has been created`)); location.hash = 'sak-' + c.id;
+  });
+  $('#draftReset').addEventListener('click', () => { DRAFT = {...DRAFT_DEF}; store.del('cg_draft'); render(); });
+};
+
+// ---------- Visning: Innsikt ----------
+function vInnsikt(){
+  const all = CASES; const closed = all.filter(c => !OPEN.has(c.status));
+  const months = []; for(let i=5;i>=0;i--) months.push(new Date(TODAY.getFullYear(), TODAY.getMonth()-i, 1));
+  const regs = [['uaut',L('Uautorisert','Unauthorised'),'var(--info)'],['autbank',L('Bank-imitasjon','Bank impersonation'),'var(--warn)'],['annen',L('Annen svindel','Other fraud'),'var(--muted)']];
+  const per = months.map(m => { const cs = all.filter(c => c.meldt.getFullYear()===m.getFullYear() && c.meldt.getMonth()===m.getMonth()); const o = {}; regs.forEach(([k]) => o[k] = cs.filter(c => triage(c,'now').regime===k).length); o.tot = cs.length; return o; });
+  const maxM = Math.max(...per.map(p => p.tot), 1);
+  const cnt = (key, map) => Object.keys(map).map(k => [L(...map[k]), all.filter(c => c[key]===k).length]).filter(x => x[1]).sort((a,b) => b[1]-a[1]);
+  const avs = cnt('avsender', AVSENDER), kas = cnt('kanal', KANAL);
+  const bars = (rows) => { const mx = Math.max(...rows.map(r=>r[1]),1); return `<div class="bars">${rows.map(([l,v]) => `<div class="b"><span>${l}</span><span class="t"><i style="width:${v/mx*100}%"></i></span><span>${v}</span></div>`).join('')}</div>`; };
+  const refund = closed.reduce((s,c)=>s+c.refundert,0), tilb = all.reduce((s,c)=>s+c.tilbakefort,0);
+  const bt = closed.filter(c=>c.avgjort).map(c => bizBetween(c.meldt, c.avgjort)); const snitt = bt.length ? bt.reduce((a,b)=>a+b,0)/bt.length : 0;
+  const psrCases = closed.filter(c => triage(c,'psr').regime==='psr'); const psrGap = psrCases.reduce((s,c) => s + Math.max(0, c.belop - c.refundert), 0);
+  const uaut = all.filter(c => c.utfortAv==='svindler'), man = all.filter(c => c.utfortAv==='kunde');
+  const sum = a => a.reduce((s,c)=>s+c.belop,0), sumT = a => a.reduce((s,c)=>s+c.tilbakefort,0);
+  const spoofs = all.filter(c => c.ind.spoof).sort((a,b)=>b.meldt-a.meldt);
+  const tr = 'class="num" style="text-align:right"';
+  return `<div class="stack-l">
+    <div class="stack">${sampleBanner()}<h1 style="font-size:28px">${S('innsikt')}</h1></div>
+    <div class="kpis">
+      <div class="kpi"><span class="v">${all.length}</span><span class="l">${L('Krav siste seks måneder','Claims in the last six months')}</span></div>
+      <div class="kpi"><span class="v">${mill(refund)}</span><span class="l">${L('Refundert til kunder','Refunded to customers')}</span></div>
+      <div class="kpi"><span class="v">${mill(tilb)}</span><span class="l">${L('Tilbakeført fra mottakerbanker','Recovered from receiving banks')}</span></div>
+      <div class="kpi"><span class="v">${dec(snitt)}</span><span class="l">${L('Virkedager i snitt til beslutning','Average business days to decision')}</span></div>
+    </div>
+    <section class="grid2">
+      <div class="panel"><div class="panel-h"><h3>${L('Krav per måned etter regelverk','Claims per month by rules')}</h3><span class="muted" style="font-size:12px">${S('modeNow')}</span></div>
+        <div class="cols">${per.map(p => `<div class="c"><b>${p.tot}</b><div class="stk" style="height:${p.tot/maxM*130}px">${regs.map(([k,,col]) => `<i style="height:${p.tot?p[k]/p.tot*100:0}%; background:${col}"></i>`).join('')}</div></div>`).join('')}</div>
+        <div class="colx">${months.map(m => `<span>${m.toLocaleDateString(LOC(),{month:'short'})}</span>`).join('')}</div>
+        <div class="legend" style="margin-top:10px">${regs.map(([,l,c]) => `<span><i style="background:${c}"></i>${l}</span>`).join('')}</div></div>
+      <div class="panel stack"><h3>${L('Hva PSR vil bety for Morild Bank','What PSR will mean for Morild Bank')}</h3>
+        <p style="font-size:14px">${L(`${psrCases.length} av ${closed.length} avsluttede krav (${Math.round(psrCases.length/Math.max(closed.length,1)*100)} %) gjaldt bank-imitasjon via bankens kanal og ville fått refusjonsrett etter PSR.`,`${psrCases.length} of ${closed.length} closed claims (${Math.round(psrCases.length/Math.max(closed.length,1)*100)}%) involved bank impersonation via the bank’s channel and would have had a refund right under PSR.`)}</p>
+        <div class="kpi" style="background:var(--warn-soft); border-color:transparent"><span class="v" style="color:var(--warn)">${mill(psrGap)}</span><span class="l">${L('ble ikke refundert i disse sakene. Det er et anslag på hva banken ville refundert i tillegg med PSR, før forebygging og tilbakekall.','was not refunded in these cases. This is an estimate of what the bank would additionally refund under PSR, before prevention and recall.')}</span></div>
+        <p class="muted" style="font-size:12.5px">${L('Tallet viser hvorfor tidlig stopp av betalinger og raskt tilbakekall blir viktigere når PSR gjelder.','The figure shows why stopping payments early and fast recall become more important once PSR applies.')}</p></div>
+    </section>
+    <section class="grid2">
+      <div class="panel"><h3 style="margin-bottom:12px">${L('Hvem svindleren utga seg for å være','Who the fraudster posed as')}</h3>${bars(avs)}</div>
+      <div class="panel"><h3 style="margin-bottom:12px">${L('Kanal for første kontakt','Channel of first contact')}</h3>${bars(kas)}</div>
+    </section>
+    <section class="stack"><div class="panel-h"><h2>${L('Utkast til halvårsrapportering','Draft half-yearly report')}</h2><span class="pill">${L('Utkast · forenklede kategorier','Draft · simplified categories')}</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>${L('Kategori','Category')}</th><th style="text-align:right">${L('Antall','Count')}</th><th style="text-align:right">${L('Svindlet beløp','Amount defrauded')}</th><th style="text-align:right">${L('Tilbakeført','Recovered')}</th></tr></thead><tbody>
+        <tr><td>${L('Betalinger utført av svindler (uautorisert)','Payments made by fraudster (unauthorised)')}</td><td ${tr}>${uaut.length}</td><td ${tr}>${nok(sum(uaut))}</td><td ${tr}>${nok(sumT(uaut))}</td></tr>
+        <tr><td>${L('Manipulasjon av betaler (sosial manipulasjon)','Manipulation of payer (social engineering)')}</td><td ${tr}>${man.length}</td><td ${tr}>${nok(sum(man))}</td><td ${tr}>${nok(sumT(man))}</td></tr>
+        <tr><td><b>${L('Sum','Total')}</b></td><td ${tr}><b>${all.length}</b></td><td ${tr}><b>${nok(sum(all))}</b></td><td ${tr}><b>${nok(tilb)}</b></td></tr>
+      </tbody></table></div>
+      <p class="muted" style="font-size:12.5px">${L('Finanstilsynet ber om brutto svindlet beløp per halvår. Kategoriene tilpasses rapporteringsmalen i piloten.','Finanstilsynet asks for the gross amount defrauded per half-year. The categories will be adapted to the reporting template in the pilot.')}</p></section>
+    <section class="stack"><h2>${L('Signaler til teleoperatører','Signals to telecom operators')}</h2>
+      <div class="note"><b>${L('Samarbeid','Collaboration')}</b><span>${L('Bekreftede falske avsendernumre deles med teleoperatørene. Fra 1.7.2026 gir finansforetaksloven utvidet adgang til å dele slike opplysninger.','Confirmed spoofed caller numbers are shared with telecom operators. From 1 July 2026 the Financial Institutions Act gives wider access to share such information.')}</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>${L('Sak','Case')}</th><th>${L('Meldt','Reported')}</th><th>${L('Nummer vist for kunden','Number shown to the customer')}</th><th>Status</th></tr></thead><tbody>
+        ${spoofs.slice(0,6).map((c,i) => `<tr><td class="mono">${c.id}</td><td>${fmtDs(c.meldt)}</td><td>915 10 000 (${L('Morild Bank kundesenter','Morild Bank customer centre')})</td><td><span class="pill ${i<2?'warn':'ok'}">${i<2?L('Sendt til operatør','Sent to operator'):L('Bekreftet og blokkert','Confirmed and blocked')}</span></td></tr>`).join('')}
+      </tbody></table></div></section>
+  </div>`;
+}
+
+// ---------- Oppstart ----------
+function setMode(m){ MODE = m; store.set('cg_mode', m); render(); toast(m==='psr' ? L('PSR-regler er slått på (simulert)','PSR rules are switched on (simulated)') : L('Gjeldende rett er valgt','Current law is selected')); }
+function setLang(l){ LANG = l; try{ sessionStorage.setItem('cg_lang', l); }catch(e){} render(); }
+$('#modeNow').addEventListener('click', () => setMode('now'));
+$('#modePsr').addEventListener('click', () => setMode('psr'));
+$$('#langSwitch button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+$('#resetBtn').addEventListener('click', () => { ['cg_changes','cg_added','cg_draft','cg_bc','cg_mode'].forEach(store.del); MODE='now'; BC={...BC_DEF}; DRAFT={...DRAFT_DEF}; loadCases(); render(); toast(L('Demodataene er tilbakestilt','The demo data has been reset')); });
+window.addEventListener('hashchange', render);
+loadCases(); render();
+</script>
+</body>
+</html>
