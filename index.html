@@ -364,7 +364,7 @@ const TODAY = (() => { const d = new Date(); return new Date(d.getFullYear(), d.
 const daysAgo = n => { const d = new Date(TODAY); d.setDate(d.getDate()-n); return d; };
 
 // ---------- Kodeverk ----------
-const AVSENDER = { bank:['Morild Bank','Morild Bank'], politi:['Politi / Kripos','Police / Kripos'], annen:['Annen aktør (Posten, Nav, e.l.)','Other party (Posten, Nav, etc.)'], invest:['Investeringstilbud','Investment offer'], ingen:['Ingen kjent','None known'] };
+const AVSENDER = { bank:['Morild Bank','Morild Bank'], politi:['Politi / Kripos','Police / Kripos'], annen:['Annen aktør (pakkelevering, Nav e.l.)','Other party (parcel delivery, Nav, etc.)'], invest:['Investeringstilbud','Investment offer'], ingen:['Ingen kjent','None known'] };
 const KANAL = { telefon:['Telefonsamtale','Phone call'], sms:['SMS','Text message'], epost:['E-post','Email'], chat:['Melding / sosiale medier','Message / social media'], nett:['Nettside / annonse','Website / ad'] };
 const STATUS = {
   ny:{t:['Ny','New'], c:'info'}, vurdering:{t:['Under vurdering','Under review'], c:'acc'}, 'venter-kunde':{t:['Venter på kunde','Awaiting customer'], c:'warn'},
@@ -379,7 +379,7 @@ const Lg = (no, en) => ({no, en}); // tospråklig logglinje
 function rng(seed){ let s = seed>>>0; return () => { s = (s*1664525 + 1013904223)>>>0; return s/4294967296; }; }
 const FN = ['Ingrid','Ola','Kari','Per','Aud','Jonas','Sigrid','Arne','Liv','Bjørn','Randi','Erik','Turid','Magnus','Solveig','Henrik','Berit','Knut','Marit','Tor','Astrid','Lars','Gunn','Even','Hilde','Rolf','Nora','Svein','Eli','Odd'];
 const LN = ['Solheim','Berg','Hansen','Nilsen','Lie','Dahl','Haugen','Bakke','Strand','Moen','Eide','Lund','Vik','Aas','Holm','Sæther','Myhre','Brekke','Hagen','Rønning'];
-const MOTTAK = ['Revolut Bank UAB','Nordlys Sparebank','Bank Norwegian','Wise Europe','Fjordkyst Bank','N26 Bank','Skagerak Sparebank','Lunar Bank'];
+const MOTTAK = ['Baltvik Bank UAB','Nordlys Sparebank','Norskekyst Kreditt','Strømpay Europe','Fjordkyst Bank','Sydhavn Bank','Skagerak Sparebank','Nordkapp Digitalbank'];
 
 function makeCase(o){
   return Object.assign({
@@ -421,12 +421,12 @@ function seedCases(){
   const today0 = isBiz(TODAY) ? TODAY : addBiz(TODAY, -1);
 
   const open = [
-    makeCase({ showcase:true, kunde:'Ingrid Solheim', alder:71, belop:84500, betalt:addBiz(today0,-3), meldt:addBiz(today0,-3), politi:addBiz(today0,-2), kanal:'telefon', avsender:'bank', bankKanal:true, utfortAv:'kunde', antallBet:2, mottaker:'Revolut Bank UAB',
+    makeCase({ showcase:true, kunde:'Ingrid Solheim', alder:71, belop:84500, betalt:addBiz(today0,-3), meldt:addBiz(today0,-3), politi:addBiz(today0,-2), kanal:'telefon', avsender:'bank', bankKanal:true, utfortAv:'kunde', antallBet:2, mottaker:'Baltvik Bank UAB',
       ind:{koder:false, advarsel:false, gjentatt:false, forsett:false, overvaking:true, vop:true, nyEnhet:false, spoof:true}, status:'vurdering', tilbakekall:'sendt',
       forklaring:Lg('Kunden ble oppringt fra et nummer som viste «Morild Bank 915 10 000». Innringer sa at kontoen var angrepet og ba henne flytte pengene til en «sikker konto». Hun godkjente to overføringer selv i nettbanken.',
                     'The customer was called from a number displayed as "Morild Bank 915 10 000". The caller said her account had been attacked and asked her to move the money to a "safe account". She approved two transfers herself in online banking.'),
       logg:[{d:addBiz(today0,-3), t:Lg('Krav registrert av kundesenter (telefon)','Claim registered by customer centre (phone)')},{d:addBiz(today0,-3), t:L_REG.recall},{d:addBiz(today0,-2), t:Lg('Politianmeldelse mottatt (anmeldelsesnr. 26-184 552)','Police report received (report no. 26-184 552)')},{d:addBiz(today0,-2), t:Lg('Teleoperatør bekreftet falskt avsendernummer','Telecom operator confirmed spoofed caller number')}] }),
-    makeCase({ showcase:true, kunde:'Jonas Berg', alder:34, belop:23900, betalt:addBiz(today0,-1), meldt:today0, politi:today0, kanal:'sms', avsender:'bank', bankKanal:true, utfortAv:'svindler', antallBet:1, mottaker:'Wise Europe',
+    makeCase({ showcase:true, kunde:'Jonas Berg', alder:34, belop:23900, betalt:addBiz(today0,-1), meldt:today0, politi:today0, kanal:'sms', avsender:'bank', bankKanal:true, utfortAv:'svindler', antallBet:1, mottaker:'Strømpay Europe',
       ind:{koder:true, advarsel:true, gjentatt:false, forsett:false, overvaking:false, vop:false, nyEnhet:true, spoof:false}, status:'ny', tilbakekall:'sendt',
       forklaring:Lg('Kunden fikk SMS i samme tråd som Morild Banks ekte meldinger, med lenke til en falsk innloggingsside. Han oppga BankID-kode og passord. Betalingen ble utført fra en ny enhet han ikke kjenner.',
                     'The customer received a text in the same thread as Morild Bank’s genuine messages, with a link to a fake login page. He entered his BankID code and password. The payment was made from a new device he does not recognise.'),
@@ -436,7 +436,7 @@ function seedCases(){
       forklaring:Lg('Innringer presenterte seg som etterforsker i Kripos og sa at bankansatte var involvert i svindel. Kunden ble bedt om ikke å kontakte banken og overførte penger til en «beskyttet konto» i tre omganger.',
                     'The caller introduced himself as a Kripos investigator and said bank employees were involved in fraud. The customer was told not to contact the bank and transferred money to a "protected account" in three rounds.'),
       logg:[{d:addBiz(today0,-4), t:Lg('Krav registrert i filial','Claim registered at branch')},{d:addBiz(today0,-4), t:Lg('Politianmeldelse mottatt','Police report received')},{d:addBiz(today0,-3), t:Lg('Mottakerbank tilbakeførte 41 000 kr','Receiving bank returned NOK 41,000')}] }),
-    makeCase({ showcase:true, kunde:'Erik Lund', alder:52, belop:210000, betalt:addBiz(today0,-6), meldt:addBiz(today0,-5), politi:null, kanal:'nett', avsender:'invest', bankKanal:false, utfortAv:'kunde', antallBet:4, mottaker:'Lunar Bank',
+    makeCase({ showcase:true, kunde:'Erik Lund', alder:52, belop:210000, betalt:addBiz(today0,-6), meldt:addBiz(today0,-5), politi:null, kanal:'nett', avsender:'invest', bankKanal:false, utfortAv:'kunde', antallBet:4, mottaker:'Nordkapp Digitalbank',
       ind:{koder:false, advarsel:true, gjentatt:true, forsett:false, overvaking:false, vop:false, nyEnhet:false, spoof:false}, status:'venter-kunde', tilbakekall:'avvist',
       forklaring:Lg('Kunden investerte i en kryptoplattform etter en annonse på sosiale medier. Han betalte fire ganger over tre uker og ble advart av nettbanken før den siste betalingen.',
                     'The customer invested in a crypto platform after an ad on social media. He paid four times over three weeks and was warned by online banking before the last payment.'),
