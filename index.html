@@ -89,6 +89,8 @@ p{margin:0}
 .grid3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px}
 .panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:18px 20px; min-width:0}
 .panel > h3{margin-bottom:10px}
+h2.h-card{font-family:var(--f-body); font-size:15px; font-weight:600; line-height:1.55; letter-spacing:0}
+.panel > h2.h-card{margin-bottom:10px}
 .panel-h{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:12px; flex-wrap:wrap}
 .lede{font-size:17px; line-height:1.6; max-width:68ch; color:var(--ink)}
 .prose{max-width:68ch; display:flex; flex-direction:column; gap:10px}
@@ -301,7 +303,7 @@ textarea{min-height:120px; resize:vertical; line-height:1.5}
     <main class="content" id="view"></main>
   </div>
 </div>
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <script>
 // ---------- Hjelpere ----------
 const $ = (s, r=document) => r.querySelector(s);
@@ -324,7 +326,7 @@ const fmtD = d => d ? d.toLocaleDateString(LOC(), {day:'numeric', month:'short',
 const fmtDs = d => d ? d.toLocaleDateString(LOC(), {day:'numeric', month:'short'}) : '–';
 const dec = (v, max=1) => Number(v).toLocaleString(LOC(), {maximumFractionDigits:max});
 const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const parseIso = s => { if(!s) return null; const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const parseIso = s => { if(!s || typeof s !== 'string') return null; const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
 const plural = (n, no1, noN, en1, enN) => L(n===1?no1:noN, n===1?en1:enN);
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2600); }
 
@@ -459,17 +461,28 @@ function seedCases(){
 }
 
 // ---------- Tilstand ----------
-let MODE = store.get('cg_mode', 'now');
+let MODE = store.get('cg_mode', 'now'); if(MODE !== 'now' && MODE !== 'psr') MODE = 'now';
 let CASES = [];
 function reviveCase(c){ ['betalt','meldt','politi','avgjort'].forEach(k => c[k] = c[k] ? parseIso(c[k]) : null); c.logg = (c.logg||[]).map(l => ({d:parseIso(l.d), t:l.t})); return makeCase(c); }
 function serialize(c){ const o = {...c}; ['betalt','meldt','politi','avgjort'].forEach(k => o[k] = c[k] ? iso(c[k]) : null); o.logg = c.logg.map(l => ({d:iso(l.d), t:l.t})); return o; }
 function loadCases(){
   CASES = seedCases();
-  const changes = store.get('cg_changes', {});
-  const added = store.get('cg_added', []);
-  CASES = CASES.map(c => changes[c.id] ? reviveCase({...serialize(c), ...changes[c.id]}) : c);
-  added.forEach(a => CASES.push(reviveCase(a)));
+  // Lagrede endringer brukes bare hvis de gir en gyldig sak; ødelagte data i nettleseren ignoreres.
+  const plain = v => v && typeof v === 'object' && !Array.isArray(v);
+  let changes = store.get('cg_changes', {}); if(!plain(changes)) changes = {};
+  let added = store.get('cg_added', []); if(!Array.isArray(added)) added = [];
+  const safe = o => { try{ const c = reviveCase(o); return validCase(c) ? c : null; }catch(e){ return null; } };
+  CASES = CASES.map(c => plain(changes[c.id]) ? (safe({...serialize(c), ...changes[c.id]}) || c) : c);
+  added.forEach(a => { if(plain(a) && !byId(a.id)){ const c = safe(a); if(c) CASES.push(c); } });
 }
+function validCase(c){
+  const okDate = d => d instanceof Date && !isNaN(d);
+  return typeof c.id === 'string' && /^MB-\d{4}-\d{4}$/.test(c.id) && typeof c.kunde === 'string' && Number.isFinite(c.belop) && c.belop >= 0
+    && okDate(c.meldt) && ['betalt','politi','avgjort'].every(k => c[k] === null || okDate(c[k]))
+    && STATUS[c.status] && AVSENDER[c.avsender] && KANAL[c.kanal] && ['kunde','svindler','usikker'].includes(c.utfortAv)
+    && plain2(c.ind) && Array.isArray(c.logg) && c.logg.every(l => okDate(l.d)) && Number.isFinite(c.refundert) && Number.isFinite(c.tilbakefort);
+}
+function plain2(v){ return v && typeof v === 'object' && !Array.isArray(v); }
 function saveCase(c){
   if(c.added){ const added = store.get('cg_added', []).filter(a => a.id !== c.id); added.push(serialize(c)); store.set('cg_added', added); }
   else { const ch = store.get('cg_changes', {}); ch[c.id] = serialize(c); store.set('cg_changes', ch); }
@@ -648,6 +661,7 @@ function render(){
   $$('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.v === key ? 'page' : 'false'));
   $('#cntOpen').textContent = CASES.filter(c => OPEN.has(c.status)).length;
   $('#modeNow').setAttribute('aria-pressed', MODE==='now'); $('#modePsr').setAttribute('aria-pressed', MODE==='psr');
+  $$('.tbl-wrap, .arch', v).forEach(el => { el.tabIndex = 0; if(!el.hasAttribute('aria-label')) el.setAttribute('role','group'); });
   (AFTER[key] || (()=>{}))(h);
   if(render._last !== h){ window.scrollTo(0,0); render._last = h; }
 }
@@ -776,9 +790,9 @@ function vVeien(){
   <p class="lede">${L('Vi foreslår en avgrenset pilot på 12 uker med svindelteamet. Målet er å bevise effekten med bankens egne saker før Morild Bank tar stilling til full innføring.','We propose a limited 12-week pilot with the fraud team. The goal is to prove the effect on the bank’s own cases before Morild Bank decides on a full rollout.')}</p></div>
 
   <section class="grid2">
-    <div class="panel"><h3>${L('Pilotens omfang','Pilot scope')}</h3>${li(LANG==='en' ? ['Fraud claims on account payments from retail customers','The fraud team: 6 case handlers and a team lead','First four weeks in parallel with current routines','Rules: current law. PSR rules are tested in simulated mode.','Card claims are excluded. They are already handled in Kystlys’ card dispute service.']
+    <div class="panel"><h2 class="h-card">${L('Pilotens omfang','Pilot scope')}</h2>${li(LANG==='en' ? ['Fraud claims on account payments from retail customers','The fraud team: 6 case handlers and a team lead','First four weeks in parallel with current routines','Rules: current law. PSR rules are tested in simulated mode.','Card claims are excluded. They are already handled in Kystlys’ card dispute service.']
       : ['Svindelkrav på kontobetalinger fra personkunder','Svindelteamet: 6 saksbehandlere og teamleder','Fire første uker i parallell med dagens rutiner','Regelverk: gjeldende rett. PSR-reglene testes i simulert modus.','Kortkrav holdes utenfor. De behandles allerede i Kystlys\' tjeneste for korttvister.'])}</div>
-    <div class="panel"><h3>${L('Suksesskriterier','Success criteria')}</h3>${li(LANG==='en' ? ['Handling time per case down at least 40%','No missed refund deadlines','All refusals have documented reasons and information on the right to complain','Rules triage matches the expert’s assessment in at least 90% of cases','Case handlers want to keep using the solution']
+    <div class="panel"><h2 class="h-card">${L('Suksesskriterier','Success criteria')}</h2>${li(LANG==='en' ? ['Handling time per case down at least 40%','No missed refund deadlines','All refusals have documented reasons and information on the right to complain','Rules triage matches the expert’s assessment in at least 90% of cases','Case handlers want to keep using the solution']
       : ['Behandlingstid per sak ned minst 40 %','Ingen oversittede frister for tilbakeføring','Alle avslag har dokumentert begrunnelse og informasjon om klageadgang','Regelverksvurderingen stemmer med fagansvarligs vurdering i minst 90 % av sakene','Saksbehandlerne vil fortsette å bruke løsningen'])}</div>
   </section>
 
@@ -856,18 +870,18 @@ function vOm(){
   <div class="stack"><span class="eyebrow">${S('grpProposal')}</span><h1>${S('om')}</h1>
   <p class="lede">${L('Forslaget er laget i fire steg, fra workshop til demo. Demoen viser hvordan løsningen kan fungere i Morild Bank. Den er ikke et ferdig produkt.','The proposal was made in four steps, from workshop to demo. The demo shows how the solution could work at Morild Bank. It is not a finished product.')}</p></div>
   <div class="steps">
-    <div class="step on"><span class="eyebrow">1 · Workshop</span><h3>${L('Halvdags workshop','Half-day workshop')}</h3><p>${L('Svindelteam, kundeservice, compliance og IT gikk gjennom dagens saksflyt, med eksempler på reelle saker.','The fraud team, customer service, compliance and IT walked through the current workflow, with examples of real cases.')}</p></div>
-    <div class="step on"><span class="eyebrow">2 · ${L('Behov','Needs')}</span><h3>${L('Sju behov','Seven needs')}</h3><p>${L('Behovene ble prioritert sammen med banken og bekreftet i oppsummeringen etter workshopen.','The needs were prioritised with the bank and confirmed in the summary after the workshop.')}</p></div>
-    <div class="step on"><span class="eyebrow">3 · ${S('grpProposal')}</span><h3>${L("Koblet til Kystlys' moduler",'Linked to Kystlys modules')}</h3><p>${L('Hvert behov ble koblet til eksisterende moduler fra Kystlys, og vi identifiserte det som mangler: saksflyten for svindelkrav.','Each need was linked to existing Kystlys modules, and we identified what is missing: the workflow for fraud claims.')}</p></div>
-    <div class="step on"><span class="eyebrow">4 · ${S('grpDemo')}</span><h3>${L('Klikkbar demo','Clickable demo')}</h3><p>${L('Demoen bruker oppdiktede saker, slik det kan se ut etter noen måneders bruk.','The demo uses made-up cases, as it could look after a few months of use.')}</p></div>
+    <div class="step on"><span class="eyebrow">1 · Workshop</span><h2 class="h-card">${L('Halvdags workshop','Half-day workshop')}</h2><p>${L('Svindelteam, kundeservice, compliance og IT gikk gjennom dagens saksflyt, med eksempler på reelle saker.','The fraud team, customer service, compliance and IT walked through the current workflow, with examples of real cases.')}</p></div>
+    <div class="step on"><span class="eyebrow">2 · ${L('Behov','Needs')}</span><h2 class="h-card">${L('Sju behov','Seven needs')}</h2><p>${L('Behovene ble prioritert sammen med banken og bekreftet i oppsummeringen etter workshopen.','The needs were prioritised with the bank and confirmed in the summary after the workshop.')}</p></div>
+    <div class="step on"><span class="eyebrow">3 · ${S('grpProposal')}</span><h2 class="h-card">${L("Koblet til Kystlys' moduler",'Linked to Kystlys modules')}</h2><p>${L('Hvert behov ble koblet til eksisterende moduler fra Kystlys, og vi identifiserte det som mangler: saksflyten for svindelkrav.','Each need was linked to existing Kystlys modules, and we identified what is missing: the workflow for fraud claims.')}</p></div>
+    <div class="step on"><span class="eyebrow">4 · ${S('grpDemo')}</span><h2 class="h-card">${L('Klikkbar demo','Clickable demo')}</h2><p>${L('Demoen bruker oppdiktede saker, slik det kan se ut etter noen måneders bruk.','The demo uses made-up cases, as it could look after a few months of use.')}</p></div>
   </div>
   <section class="grid2">
-    <div class="panel stack"><h3>${L('Regelverket demoen bygger på','The rules the demo is based on')}</h3>
+    <div class="panel stack"><h2 class="h-card">${L('Regelverket demoen bygger på','The rules the demo is based on')}</h2>
       <p style="font-size:14px">${L('<b>Gjeldende rett.</b> Finansavtaleloven (2020) om uautoriserte betalinger og egenandel, Høyesteretts dommer HR-2022-1752-A og HR-2024-990-A, og Finansklagenemndas praksis (blant annet 2024-309 og 2026-5).','<b>Current law.</b> The Norwegian Financial Contracts Act (2020) on unauthorised payments and excess, Supreme Court rulings HR-2022-1752-A and HR-2024-990-A, and the Financial Services Complaints Board’s practice (including 2024-309 and 2026-5).')}</p>
       <p style="font-size:14px">${L('<b>PSR.</b> EUs nye forordning om betalingstjenester. Politisk enighet 27.11.2025, Rådets førstebehandlingsposisjon 28.10.2026. Europaparlamentets andrebehandling gjenstår. Reglene gjelder 21 måneder etter ikrafttredelse. I Norge må forordningen innlemmes i EØS-avtalen, så tidspunktet er usikkert.','<b>PSR.</b> The EU’s new Payment Services Regulation. Political agreement on 27 Nov 2025, Council first-reading position on 28 Oct 2026. The European Parliament’s second reading remains. The rules apply 21 months after entry into force. In Norway the regulation must be incorporated into the EEA Agreement, so the timing is uncertain.')}</p>
       <p style="font-size:14px">${L('<b>Begrensning.</b> PSR-refusjonen gjelder bare når svindleren utgir seg for å være kundens egen bank via kanaler som tilskrives banken. Falsk politi og investeringssvindel er ikke omfattet.','<b>Limitation.</b> The PSR refund only applies when the fraudster poses as the customer’s own bank via channels attributed to the bank. Fake police and investment fraud are not covered.')}</p>
     </div>
-    <div class="panel stack"><h3>${L('Kilder','Sources')}</h3><ul class="sources" style="margin:0; padding-left:18px">
+    <div class="panel stack"><h2 class="h-card">${L('Kilder','Sources')}</h2><ul class="sources" style="margin:0; padding-left:18px">
       ${src.map(([u,t]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join('')}</ul></div>
   </section>
   <div class="stack" style="gap:6px; font-size:14px; color:var(--muted); border-top:1px solid var(--line); padding-top:16px">
@@ -895,7 +909,7 @@ function vSaker(){
     </div>
     ${MODE==='psr' ? `<div class="note ok"><b>${S('modePsr')}</b><span>${L('Saker med bank-imitasjon via bankens kanal får refusjonsrett og 15 virkedagers frist. Bytt tilbake til «Gjeldende rett» øverst for å sammenligne.','Cases with bank impersonation via the bank’s channel get a refund right and a 15-business-day deadline. Switch back to "Current law" at the top to compare.')}</span></div>` : ''}
     <div class="filters">
-      <input type="text" id="fq" placeholder="${L('Søk på kunde eller saksnummer','Search by customer or case number')}" value="${esc(FILTER.q)}" style="max-width:260px" aria-label="${L('Søk','Search')}">
+      <input type="text" id="fq" maxlength="60" placeholder="${L('Søk på kunde eller saksnummer','Search by customer or case number')}" value="${esc(FILTER.q)}" style="max-width:260px" aria-label="${L('Søk','Search')}">
       <select id="fst" style="max-width:190px" aria-label="Status"><option value="open">${L('Åpne krav','Open claims')}</option><option value="closed">${L('Avsluttede','Closed')}</option><option value="all">${L('Alle','All')}</option></select>
       <select id="freg" style="max-width:240px" aria-label="${S('regime')}"><option value="alle">${L('Alle regelverk','All rules')}</option>${['uaut','psr','autbank','annen'].map(k => `<option value="${k}">${L(...SHORT[k])}</option>`).join('')}</select>
     </div>
@@ -990,16 +1004,16 @@ function vSak(c){
           <div><div class="eyebrow">${L('Påstått avsender','Claimed sender')}</div><b>${av(c.avsender)}</b><div class="muted" style="font-size:12px">${ka(c.kanal)}${c.avsender==='bank' ? (c.bankKanal?L(' · bankens kanal',' · bank’s channel'):L(' · ikke bankens kanal',' · not bank’s channel')):''}</div></div>
           <div><div class="eyebrow">${L('Utført av','Made by')}</div><b>${utf}</b><div class="muted" style="font-size:12px">${L('Meldt','Reported')} ${fmtD(c.meldt)}</div></div>
         </div></div>
-        ${tx(c.forklaring) ? `<div class="panel"><h3>${L('Kundens forklaring','Customer’s explanation')}</h3><p style="font-size:14px; max-width:70ch">${esc(tx(c.forklaring))}</p></div>` : ''}
-        <div class="panel"><div class="panel-h" style="margin-bottom:4px"><h3>${L('Bevis fra bankens systemer','Evidence from the bank’s systems')}</h3><span class="muted" style="font-size:12.5px">${L('Hentet automatisk','Collected automatically')}</span></div>
+        ${tx(c.forklaring) ? `<div class="panel"><h2 class="h-card">${L('Kundens forklaring','Customer’s explanation')}</h2><p style="font-size:14px; max-width:70ch">${esc(tx(c.forklaring))}</p></div>` : ''}
+        <div class="panel"><div class="panel-h" style="margin-bottom:4px"><h2 class="h-card">${L('Bevis fra bankens systemer','Evidence from the bank’s systems')}</h2><span class="muted" style="font-size:12.5px">${L('Hentet automatisk','Collected automatically')}</span></div>
           ${evidence(c).map(([k,ic,ti,de,src]) => `<div class="ev"><span class="ico ${k}">${ic}</span><div><b style="font-weight:600">${ti}</b><div class="muted" style="font-size:13px">${esc(de)}</div></div><span class="src">${src}</span></div>`).join('')}
         </div>
-        <div class="panel"><div class="panel-h" style="margin-bottom:4px"><h3>${L('Kundens aktsomhet','Customer’s diligence')}</h3><span class="muted" style="font-size:12.5px">${L('Endringer oppdaterer forslaget','Changes update the suggestion')}</span></div>
+        <div class="panel"><div class="panel-h" style="margin-bottom:4px"><h2 class="h-card">${L('Kundens aktsomhet','Customer’s diligence')}</h2><span class="muted" style="font-size:12.5px">${L('Endringer oppdaterer forslaget','Changes update the suggestion')}</span></div>
           ${Object.keys(NEGL).map(k => `<label class="chk"><input type="checkbox" data-ind="${k}" ${c.ind[k]?'checked':''} ${decided?'disabled':''}><span>${L(...NEGL[k])}</span></label>`).join('')}
         </div>
-        <div class="panel stack"><div class="panel-h" style="margin-bottom:0"><h3>${decided?L('Sendt brev','Letter sent'):L('Brevutkast til kunden','Draft letter to the customer')}</h3><button class="btn sm" type="button" id="copyLetter">${L('Kopier tekst','Copy text')}</button></div>
+        <div class="panel stack"><div class="panel-h" style="margin-bottom:0"><h2 class="h-card">${decided?L('Sendt brev','Letter sent'):L('Brevutkast til kunden','Draft letter to the customer')}</h2><button class="btn sm" type="button" id="copyLetter">${L('Kopier tekst','Copy text')}</button></div>
           <textarea id="letter" aria-label="${L('Brevutkast','Draft letter')}" style="min-height:220px">${esc(letter(c, decided ? {k:c.status==='finkn'?'avslatt':c.status, amount:c.refundert} : s, t))}</textarea></div>
-        <div class="panel"><h3>${L('Hendelseslogg','Event log')}</h3><ul class="log">${c.logg.slice().reverse().map(l => `<li><time>${fmtD(l.d)}</time><span>${esc(logText(l.t))}</span></li>`).join('')}</ul></div>
+        <div class="panel"><h2 class="h-card">${L('Hendelseslogg','Event log')}</h2><ul class="log">${c.logg.slice().reverse().map(l => `<li><time>${fmtD(l.d)}</time><span>${esc(logText(l.t))}</span></li>`).join('')}</ul></div>
       </div>
       <div class="stack sticky">
         <div class="triage"><div class="head ${t.cls}"><span class="eyebrow">${S('regime')} · ${MODE==='psr'?S('modePsr'):S('modeNow')}</span><b>${t.title}</b></div>
@@ -1008,7 +1022,7 @@ function vSak(c){
           <div><div class="eyebrow">${t.fristLabel || L('Frist','Deadline')}</div><b class="deadline ${d.cls}">${OPEN.has(c.status) ? (t.frist ? fmtD(t.frist) : L('Ikke startet','Not started')) : d.txt}</b><div class="muted" style="font-size:12.5px">${OPEN.has(c.status) ? `${d.txt}. ${t.fristNote}` : ''}</div></div></div></div>
         ${decided ? `<div class="note ok"><b>${L('Avgjort','Decided')}</b><span>${st(c.status)}${c.refundert?`: ${nok(c.refundert)}`:''}, ${fmtD(c.avgjort)}.</span></div>` : `
         <div class="suggest"><span class="eyebrow" style="color:var(--accent)">${L('Forslag til beslutning','Suggested decision')}</span><b>${s.title}</b>${s.why.map(w => `<span style="font-size:13.5px">${w}</span>`).join('')}</div>
-        <div class="panel stack"><h3>${L('Beslutning','Decision')}</h3>
+        <div class="panel stack"><h2 class="h-card">${L('Beslutning','Decision')}</h2>
           <button class="btn primary" type="button" data-dec="accept">${L('Godta forslaget','Accept suggestion')}</button>
           <div class="row"><button class="btn sm" type="button" data-dec="refundert">${L('Refunder','Refund')}</button><button class="btn sm" type="button" data-dec="delvis">${t.regime==='uaut' ? L('Med egenandel','Less excess') : L('Delvis refusjon','Partial refund')}</button><button class="btn sm danger" type="button" data-dec="avslatt">${L('Avslå','Reject')}</button><button class="btn sm" type="button" data-dec="venter-kunde">${L('Be om info','Request info')}</button></div>
           ${t.regime==='uaut' ? '' : `<label class="f">${L('Beløp ved delvis refusjon (kr)','Amount for partial refund (NOK)')}<input type="number" id="partAmt" min="1" max="${c.belop}" placeholder="${L('Fastsett beløp','Set amount')}"></label>`}
@@ -1053,24 +1067,24 @@ function vNytt(){
       <button class="btn sm" type="button" id="draftReset">${L('Tilbakestill eksempel','Reset example')}</button></div>
     <form id="claimForm" class="split" novalidate>
       <div class="stack">
-        <div class="panel stack"><h3>${L('Kunde og betaling','Customer and payment')}</h3>
-          <div class="grid2"><label class="f">${L('Kunde','Customer')}<input type="text" id="kunde" name="kunde" value="${esc(DRAFT.kunde)}" required></label>
+        <div class="panel stack"><h2 class="h-card">${L('Kunde og betaling','Customer and payment')}</h2>
+          <div class="grid2"><label class="f">${L('Kunde','Customer')}<input type="text" id="kunde" name="kunde" maxlength="80" value="${esc(DRAFT.kunde)}" required></label>
           <label class="f">${L('Beløp (kr)','Amount (NOK)')}<input type="number" id="belop" name="belop" min="1" value="${DRAFT.belop}" required></label></div>
           <label class="f" style="max-width:260px">${L('Betalingsdato','Payment date')}<input type="date" id="betalt" name="betalt" value="${DRAFT.betalt}"></label>
         </div>
-        <div class="panel stack"><h3>${L('Hvordan ble kunden kontaktet?','How was the customer contacted?')}</h3>
+        <div class="panel stack"><h2 class="h-card">${L('Hvordan ble kunden kontaktet?','How was the customer contacted?')}</h2>
           <label class="f">${L('Kanal','Channel')}</label>${radios('kanal', optsOf(KANAL))}
           <label class="f">${L('Hvem utga svindleren seg for å være?','Who did the fraudster pose as?')}</label>${radios('avsender', optsOf(AVSENDER))}
           <div id="bankKanalWrap" class="stack" ${DRAFT.avsender==='bank'?'':'hidden'}><label class="f">${L('Kom henvendelsen via en kanal som tilhører banken?','Did the contact come via a channel belonging to the bank?')}<span class="h">${L('For eksempel bankens telefonnummer i displayet, SMS i samme tråd som bankens meldinger eller e-post fra bankens domene.','For example the bank’s phone number on the display, a text in the same thread as the bank’s messages, or an email from the bank’s domain.')}</span></label>${radios('bankKanal', [['ja',L('Ja','Yes')],['nei',L('Nei','No')],['usikker',L('Usikkert','Unsure')]])}</div>
         </div>
-        <div class="panel stack"><h3>${L('Hvem utførte betalingen?','Who made the payment?')}</h3>
+        <div class="panel stack"><h2 class="h-card">${L('Hvem utførte betalingen?','Who made the payment?')}</h2>
           ${radios('utfortAv', [['kunde',L('Kunden godkjente betalingen selv','The customer approved the payment')],['svindler',L('Svindleren brukte kundens innloggingsdata','The fraudster used the customer’s login details')],['usikker',L('Usikkert','Unsure')]])}
           <label class="f">${L('Har kunden anmeldt saken til politiet?','Has the customer reported the matter to the police?')}</label>${radios('politi', [['ja',L('Ja','Yes')],['nei',L('Ikke ennå','Not yet')]])}
         </div>
-        <div class="panel"><h3>${L('Kundens aktsomhet','Customer’s diligence')}</h3>
+        <div class="panel"><h2 class="h-card">${L('Kundens aktsomhet','Customer’s diligence')}</h2>
           ${['koder','advarsel','gjentatt'].map(k => `<label class="chk"><input type="checkbox" id="${k}" ${DRAFT[k]?'checked':''}><span>${L(...NEGL[k])}</span></label>`).join('')}
         </div>
-        <div class="panel stack"><label class="f">${L('Kundens forklaring','Customer’s explanation')}<textarea id="forklaring" name="forklaring">${esc(draftText())}</textarea></label></div>
+        <div class="panel stack"><label class="f">${L('Kundens forklaring','Customer’s explanation')}<textarea id="forklaring" name="forklaring" maxlength="2000">${esc(draftText())}</textarea></label></div>
       </div>
       <div class="stack sticky" id="livePanel"></div>
     </form></div>`;
@@ -1140,18 +1154,18 @@ function vInnsikt(){
       <div class="kpi"><span class="v">${dec(snitt)}</span><span class="l">${L('Virkedager i snitt til beslutning','Average business days to decision')}</span></div>
     </div>
     <section class="grid2">
-      <div class="panel"><div class="panel-h"><h3>${L('Krav per måned etter regelverk','Claims per month by rules')}</h3><span class="muted" style="font-size:12px">${S('modeNow')}</span></div>
+      <div class="panel"><div class="panel-h"><h2 class="h-card">${L('Krav per måned etter regelverk','Claims per month by rules')}</h2><span class="muted" style="font-size:12px">${S('modeNow')}</span></div>
         <div class="cols">${per.map(p => `<div class="c"><b>${p.tot}</b><div class="stk" style="height:${p.tot/maxM*130}px">${regs.map(([k,,col]) => `<i style="height:${p.tot?p[k]/p.tot*100:0}%; background:${col}"></i>`).join('')}</div></div>`).join('')}</div>
         <div class="colx">${months.map(m => `<span>${m.toLocaleDateString(LOC(),{month:'short'})}</span>`).join('')}</div>
         <div class="legend" style="margin-top:10px">${regs.map(([,l,c]) => `<span><i style="background:${c}"></i>${l}</span>`).join('')}</div></div>
-      <div class="panel stack"><h3>${L('Hva PSR vil bety for Morild Bank','What PSR will mean for Morild Bank')}</h3>
+      <div class="panel stack"><h2 class="h-card">${L('Hva PSR vil bety for Morild Bank','What PSR will mean for Morild Bank')}</h2>
         <p style="font-size:14px">${L(`${psrCases.length} av ${closed.length} avsluttede krav (${Math.round(psrCases.length/Math.max(closed.length,1)*100)} %) gjaldt bank-imitasjon via bankens kanal og ville fått refusjonsrett etter PSR.`,`${psrCases.length} of ${closed.length} closed claims (${Math.round(psrCases.length/Math.max(closed.length,1)*100)}%) involved bank impersonation via the bank’s channel and would have had a refund right under PSR.`)}</p>
         <div class="kpi" style="background:var(--warn-soft); border-color:transparent"><span class="v" style="color:var(--warn)">${mill(psrGap)}</span><span class="l">${L('ble ikke refundert i disse sakene. Det er et anslag på hva banken ville refundert i tillegg med PSR, før forebygging og tilbakekall.','was not refunded in these cases. This is an estimate of what the bank would additionally refund under PSR, before prevention and recall.')}</span></div>
         <p class="muted" style="font-size:12.5px">${L('Tallet viser hvorfor tidlig stopp av betalinger og raskt tilbakekall blir viktigere når PSR gjelder.','The figure shows why stopping payments early and fast recall become more important once PSR applies.')}</p></div>
     </section>
     <section class="grid2">
-      <div class="panel"><h3 style="margin-bottom:12px">${L('Hvem svindleren utga seg for å være','Who the fraudster posed as')}</h3>${bars(avs)}</div>
-      <div class="panel"><h3 style="margin-bottom:12px">${L('Kanal for første kontakt','Channel of first contact')}</h3>${bars(kas)}</div>
+      <div class="panel"><h2 class="h-card" style="margin-bottom:12px">${L('Hvem svindleren utga seg for å være','Who the fraudster posed as')}</h2>${bars(avs)}</div>
+      <div class="panel"><h2 class="h-card" style="margin-bottom:12px">${L('Kanal for første kontakt','Channel of first contact')}</h2>${bars(kas)}</div>
     </section>
     <section class="stack"><div class="panel-h"><h2>${L('Utkast til halvårsrapportering','Draft half-yearly report')}</h2><span class="pill">${L('Utkast · forenklede kategorier','Draft · simplified categories')}</span></div>
       <div class="tbl-wrap"><table><thead><tr><th>${L('Kategori','Category')}</th><th style="text-align:right">${L('Antall','Count')}</th><th style="text-align:right">${L('Svindlet beløp','Amount defrauded')}</th><th style="text-align:right">${L('Tilbakeført','Recovered')}</th></tr></thead><tbody>
