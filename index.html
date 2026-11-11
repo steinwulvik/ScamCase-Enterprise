@@ -687,6 +687,12 @@ function vForslag(){
     </dl></div>
   </section>
 
+  <section class="grid3">
+    <div class="kpi"><span class="v">${L('962 mill. kr','NOK 962m')}</span><span class="l">${L('svindlet i Norge i 2025 (Finanstilsynet)','defrauded in Norway in 2025 (Finanstilsynet)')}</span></div>
+    <div class="kpi"><span class="v">52 %</span><span class="l">${L('av svindlet beløp i 2. halvår 2025 var sosial manipulasjon','of the amount defrauded in H2 2025 was social engineering')}</span></div>
+    <div class="kpi"><span class="v">834</span><span class="l">${L('svindelklager til Finansklagenemnda i 2025','fraud complaints to the Financial Services Complaints Board in 2025')}</span></div>
+  </section>
+
   <section class="stack">
     <div class="panel-h"><h2>${L('Behovene fra workshopen og hvordan demoen svarer','Needs from the workshop and how the demo responds')}</h2></div>
     <div class="needs">${NEEDS.map(n => `<div class="need"><span class="k">${n.k}</span><h3>${N(n,'t')}</h3><p>${N(n,'how')}</p><a href="${n.link}">${L('Vis i demo','Show in demo')}: ${N(n,'lt')} →</a></div>`).join('')}</div>
@@ -702,11 +708,6 @@ function vForslag(){
     </div>
   </section>
 
-  <section class="grid3">
-    <div class="kpi"><span class="v">${L('962 mill. kr','NOK 962m')}</span><span class="l">${L('svindlet i Norge i 2025 (Finanstilsynet)','defrauded in Norway in 2025 (Finanstilsynet)')}</span></div>
-    <div class="kpi"><span class="v">52 %</span><span class="l">${L('av svindlet beløp i 2. halvår 2025 var sosial manipulasjon','of the amount defrauded in H2 2025 was social engineering')}</span></div>
-    <div class="kpi"><span class="v">834</span><span class="l">${L('svindelklager til Finansklagenemnda i 2025','fraud complaints to the Financial Services Complaints Board in 2025')}</span></div>
-  </section>
   </div>`;
 }
 
